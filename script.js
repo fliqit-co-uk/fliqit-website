@@ -30,6 +30,6 @@ document.querySelector('#contact-form')?.addEventListener('submit', (event) => {
   const data = new FormData(form);
   const subject = encodeURIComponent(`Website message from ${data.get('name')}`);
   const body = encodeURIComponent(`From: ${data.get('name')} (${data.get('contact-email')})\n\n${data.get('message')}`);
-  window.location.href = `mailto:hello@fliqit.co.uk?subject=${subject}&body=${body}`;
+  window.location.href = `mailto:noreply@fliqit.co.uk?subject=${subject}&body=${body}`;
   form.reset();
 });

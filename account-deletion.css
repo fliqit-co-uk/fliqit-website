@@ -1,0 +1,295 @@
+/* Page-specific account-deletion layout. Loaded after styles.css. */
+.site-header.legal-header {
+  position: relative;
+  background: #130820;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.legal-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.legal-nav a {
+  color: #f4effb;
+  font-size: 0.88rem;
+  text-decoration: none;
+}
+
+.deletion-page {
+  overflow: hidden;
+  background: radial-gradient(circle at 87% 5%, rgba(118, 70, 186, 0.22), transparent 25%), #0c0617;
+}
+
+.deletion-hero {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  align-items: end;
+  gap: 5rem;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 7rem 5vw 5.4rem;
+}
+
+.deletion-hero-copy { max-width: 720px; }
+
+.deletion-hero h1 {
+  margin: 0.9rem 0 1.5rem;
+  font: 500 clamp(3.5rem, 7vw, 6.65rem) / 0.93 var(--serif);
+  letter-spacing: -0.065em;
+}
+
+.deletion-hero h1 em { color: #d9c2ff; }
+
+.deletion-hero-copy > p:last-child {
+  max-width: 535px;
+  color: var(--muted);
+  font-size: 1.06rem;
+  line-height: 1.65;
+}
+
+.deletion-hero-status {
+  position: relative;
+  min-height: 270px;
+  padding: 2rem;
+  border: 1px solid rgba(218, 191, 255, 0.22);
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(131, 77, 199, 0.29), rgba(34, 16, 59, 0.82));
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2);
+}
+
+.status-orb {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.5rem;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  color: #e7d8ff;
+  font-size: 1.2rem;
+}
+
+.status-label {
+  margin: 1.8rem 0 0.8rem;
+  color: #dac4fb;
+  font: 500 0.65rem var(--mono);
+  letter-spacing: 0.15em;
+}
+
+.deletion-hero-status strong {
+  font: 500 2.25rem / 0.95 var(--serif);
+  letter-spacing: -0.045em;
+}
+
+.status-divider {
+  display: block;
+  width: 100%;
+  height: 1px;
+  margin: 1.8rem 0 0.8rem;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.deletion-hero-status p:last-child {
+  max-width: 270px;
+  margin: 0;
+  color: #c9b9da;
+  font-size: 0.8rem;
+}
+
+.deletion-main {
+  display: grid;
+  grid-template-columns: 185px minmax(0, 1fr);
+  gap: 7vw;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 5vw 7rem;
+}
+
+.deletion-aside {
+  position: sticky;
+  top: 1.5rem;
+  display: grid;
+  align-self: start;
+  gap: 0.7rem;
+  padding-top: 1rem;
+}
+
+.deletion-aside p {
+  margin: 0 0 0.5rem;
+  color: #8f7ca6;
+  font: 500 0.62rem var(--mono);
+  letter-spacing: 0.14em;
+}
+
+.deletion-aside a {
+  color: #b9aac9;
+  font-size: 0.82rem;
+  text-decoration: none;
+}
+
+.deletion-aside a:hover { color: #fff; }
+.deletion-content { min-width: 0; }
+.deletion-section { padding: 2rem 0 4.7rem; }
+.deletion-section-line { border-top: 1px solid rgba(255, 255, 255, 0.1); }
+
+.deletion-section h2,
+.shared-history h2,
+.deletion-help h2 {
+  margin: 0.75rem 0 1.8rem;
+  font: 500 clamp(2.35rem, 4vw, 3.7rem) / 0.98 var(--serif);
+  letter-spacing: -0.055em;
+}
+
+.deletion-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.deletion-steps article {
+  min-height: 210px;
+  padding: 1.6rem 1.4rem 1.7rem 0;
+}
+
+.deletion-steps article + article {
+  padding-left: 1.4rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.deletion-steps span {
+  color: #cba9fb;
+  font: 500 0.68rem var(--mono);
+  letter-spacing: 0.1em;
+}
+
+.deletion-steps h3,
+.deletion-data-grid h3 {
+  margin: 2.5rem 0 0.55rem;
+  color: #fff;
+  font: 600 1rem var(--sans);
+}
+
+.deletion-steps p,
+.deletion-data-grid p,
+.deletion-lead,
+.shared-history > div:last-child > p:last-child,
+.deletion-help > p:not(.eyebrow) {
+  color: #bcaeca;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.deletion-lead {
+  max-width: 540px;
+  margin-bottom: 1.7rem;
+}
+
+.deletion-data-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.deletion-data-grid > div {
+  padding: 1.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.deletion-data-grid > div > span {
+  display: grid;
+  width: 31px;
+  height: 31px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(177, 126, 244, 0.16);
+  color: #dec5ff;
+  font-size: 0.9rem;
+}
+
+.deletion-data-grid h3 { margin: 1.45rem 0 0.5rem; }
+.deletion-data-grid p { margin: 0; font-size: 0.8rem; }
+
+.shared-history {
+  display: grid;
+  grid-template-columns: 74px 1fr;
+  gap: 1.5rem;
+  margin: 0 0 4.7rem;
+  padding: 2.4rem;
+  border: 1px solid rgba(205, 172, 255, 0.18);
+  border-radius: 20px;
+  background: linear-gradient(135deg, #27203d, #191128);
+}
+
+.shared-history-mark {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(177, 126, 244, 0.15);
+  color: #d8bdff;
+  font-size: 1.55rem;
+}
+
+.shared-history h2 {
+  margin: 0.6rem 0 1.15rem;
+  font-size: clamp(2rem, 3.2vw, 3rem);
+}
+
+.shared-history > div:last-child > p:last-child {
+  max-width: 625px;
+  margin: 0;
+}
+
+.deletion-help {
+  padding: 3.7rem 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.deletion-help > p:not(.eyebrow) {
+  max-width: 510px;
+  margin-bottom: 1.5rem;
+}
+
+.deletion-email {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.85rem 1.15rem;
+  border-radius: 99px;
+  background: #e8dcfa;
+  color: #171020;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.deletion-email span { font-size: 1.2rem; }
+.deletion-email:hover { background: #fff; }
+
+@media (max-width: 760px) {
+  .site-header.legal-header { padding: 1.2rem 7vw; }
+  .legal-nav { gap: 1rem; }
+  .legal-nav a { font-size: 0.8rem; }
+  .deletion-hero { grid-template-columns: 1fr; gap: 2.4rem; padding: 4.6rem 7vw 3.6rem; }
+  .deletion-hero h1 { font-size: clamp(3.35rem, 13vw, 4.7rem); }
+  .deletion-hero-status { min-height: 210px; }
+  .deletion-main { display: block; padding: 0 7vw 5.5rem; }
+  .deletion-aside { display: none; }
+  .deletion-section { padding: 1.6rem 0 3.5rem; }
+  .deletion-steps,
+  .deletion-data-grid { grid-template-columns: 1fr; }
+  .deletion-steps article { min-height: 0; padding: 1.4rem 0; }
+  .deletion-steps article + article { padding-left: 0; border-top: 1px solid rgba(255, 255, 255, 0.12); border-left: 0; }
+  .deletion-steps h3 { margin-top: 1.5rem; }
+  .shared-history { grid-template-columns: 1fr; gap: 1rem; margin-bottom: 3.5rem; padding: 1.6rem; }
+  .shared-history-mark { width: 48px; height: 48px; }
+  .deletion-help { padding-top: 3rem; }
+}
