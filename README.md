@@ -24,6 +24,8 @@ DNS and certificate issuance can take several hours. Keep the domain configured 
 ## Before launch
 
 - Replace `hello@fliqit.co.uk` if a different support inbox is used.
-- Connect the waitlist form to an email provider or backend; it currently confirms in the browser only.
+- Waitlist lives at `/waitlist` and posts to `POST /v1/waitlist` on the production Cloud Function.
 - Review and have counsel approve the privacy and account-deletion pages before app-store submission.
-- Test the site locally by opening `index.html` in a browser.
+- Test the site locally with a static server (for example `npx serve`) so root-relative paths like `/waitlist` resolve. Opening files directly in the browser will not.
+
+Pages are published as folders (`waitlist/index.html`, and so on) so URLs stay extensionless: `/waitlist`, `/privacy`, `/account-deletion`, `/child-safety`. The old `.html` paths redirect to those URLs.
