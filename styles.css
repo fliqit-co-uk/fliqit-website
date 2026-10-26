@@ -47,3 +47,9 @@ html:has(.waitlist-page),
   .hero-waitlist-form>div{display:block}
   .hero-waitlist-form .button-primary{width:100%;margin-top:.6rem}
 }
+
+.mode-link{position:relative;z-index:1;margin-top:.4rem;padding-top:.2rem;color:#fff;font-size:.85rem;font-weight:600;text-decoration:none;border-bottom:1px solid rgba(255,255,255,.35);align-self:flex-start;padding-bottom:.15rem}
+.mode-link:hover{border-bottom-color:#fff}
+.mode-link:focus-visible{outline:2px solid #d8bdff;outline-offset:4px;border-radius:4px}
+@media(min-width:761px){.site-nav{gap:1.35rem}}
+@media(min-width:761px) and (max-width:1050px){.site-nav{gap:.8rem}.site-nav a{font-size:.8rem;white-space:nowrap}.nav-cta{padding:.55rem .8rem}}
