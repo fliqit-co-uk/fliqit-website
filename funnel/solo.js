@@ -2,12 +2,12 @@
    FLIQ.IT SOLO FUNNEL: content and screens.
    Engine, waitlist and handoff live in core.js. Every claim must be true.
    ========================================================= */
-const { CONFIG, esc, wait, isoDate, nextDow, fmt, fmtLong, dayOptions } = Fliq;
+const { CONFIG, esc, wait, isoDate, nextDow, fmt, fmtLong } = Fliq;
 const { USER_COUNT, EXPERT, TESTIMONIALS } = CONFIG;
 const MODE = 'solo';
 const track = (event, props) => Fliq.track(MODE, event, props);
 
-const S = { name:"", age:null, a:{}, src:null, pop:{}, email:"", joined:false, handoffId:null, exp:null, customExp:"", place:null, freq:null, dayLabel:"", dayDate:null, time:null, profile:null };
+const S = { name:"", age:null, dob:null, dobParts:null, a:{}, src:null, pop:{}, email:"", joined:false, handoffId:null, exp:null, customExp:"", place:null, freq:null, dayLabel:"", dayDate:null, time:null, profile:null };
 const E = Fliq.createEngine({ mode: MODE, S });
 const { view, bindOpts, btn, ask, closeModal, next } = E;
 const app = Fliq.$('#app');
@@ -58,7 +58,7 @@ const REVEAL = {
   plusone:{strength:"You're warm, social and fun to be around.",
     blind:"You put your life on hold until someone's free to come.",
     cost:"Saying no to things you want, just because you'd be doing them alone.",
-    fix:[["Easy first solo dates","Low-pressure plans that make going alone feel normal."],["Waves","Do something at the same moment as other people, so alone never feels lonely."],["Invite someone, if you want","Turn any solo plan into a plan with a friend in one tap."]]},
+    fix:[["Easy first solo dates","Low-pressure plans that make going alone feel normal."],["Waves","Do something at the same moment as other people, so alone never feels lonely."],["Invite someone, if you want","Turn any solo plan into a plan with a friend."]]},
   achiever:{strength:"You're driven and disciplined, and you get things done.",
     blind:"Even your downtime has targets. Nothing is just for fun anymore.",
     cost:"Ticking every box and still feeling like you're missing something.",
@@ -98,7 +98,6 @@ const PLACE_TYPES = { out:{t:"Out somewhere", d:"A café, park, gallery or venue
 const FREQS = {
   once:{t:"Just this once", short:"One time", rrule:null, every:0},
   weekly:{t:"Every week", short:"Weekly", rrule:"FREQ=WEEKLY;INTERVAL=1", every:1},
-  fortnightly:{t:"Every 2 weeks", short:"Every 2 weeks", rrule:"FREQ=WEEKLY;INTERVAL=2", every:2},
   monthly:{t:"Every month", short:"Monthly", rrule:"FREQ=MONTHLY;INTERVAL=1", every:4}
 };
 /* The 8-week Solo challenge. Week 1 is booked here; weeks 2-8 unlock one at a time in the app. */
@@ -134,7 +133,7 @@ function handoff(){
   return Fliq.buildHandoff(S, {
     funnel: { id:'solo_type', mode:'solo' },
     profile: { type: S.profile, name: S.profile ? PROFILES[S.profile].name : null },
-    user: { first_name: S.name || null, age_range: S.age || null },
+    user: { first_name: S.name || null, dob: S.dob || null, age_range: S.age || null },
     plan: {
       mode: 'solo',
       title: expT(),
@@ -448,43 +447,70 @@ function placeStep(){
   draw(false);
   go.onclick = () => { S.place = {type:st.type, name: st.name || (st.type==='home' ? 'Home' : st.type==='online' ? 'Online' : '')}; track('plan_place',{type:S.place.type}); next(); };
 }
+function calendarHTML(){
+  return `<div class="cal"><div class="cal-head"><button class="cal-nav" id="cprev" aria-label="Previous month">‹</button><b id="cmon"></b><button class="cal-nav" id="cnext" aria-label="Next month">›</button></div><div class="cal-grid" id="cgrid"></div></div>`;
+}
+function mountCalendar(onPick){
+  const today = new Date(); today.setHours(12,0,0,0);
+  const minM = new Date(today.getFullYear(), today.getMonth(), 1), maxM = new Date(today.getFullYear(), today.getMonth()+6, 1);
+  let vm = S.dayDate ? new Date(S.dayDate.getFullYear(), S.dayDate.getMonth(), 1) : new Date(minM);
+  const grid = document.getElementById('cgrid'), mon = document.getElementById('cmon'), prev = document.getElementById('cprev'), nxt = document.getElementById('cnext');
+  const draw = () => {
+    mon.textContent = vm.toLocaleDateString('en-GB',{month:'long', year:'numeric'});
+    prev.disabled = vm <= minM; nxt.disabled = vm >= maxM;
+    const lead = (vm.getDay()+6)%7, days = new Date(vm.getFullYear(), vm.getMonth()+1, 0).getDate();
+    let h = ['M','T','W','T','F','S','S'].map(d=>`<span>${d}</span>`).join('') + '<i></i>'.repeat(lead);
+    for(let d=1; d<=days; d++){
+      const dt = new Date(vm.getFullYear(), vm.getMonth(), d, 12);
+      const sel = S.dayDate && dt.toDateString()===S.dayDate.toDateString(), tdy = dt.toDateString()===today.toDateString();
+      h += `<button class="cal-day${sel?' sel':''}${tdy?' today':''}" data-d="${d}" ${dt<today?'disabled':''} aria-label="${fmt(dt)}">${d}</button>`;
+    }
+    grid.innerHTML = h;
+    grid.querySelectorAll('.cal-day:not([disabled])').forEach(b => b.onclick = () => { S.dayDate = new Date(vm.getFullYear(), vm.getMonth(), +b.dataset.d, 12); S.dayLabel = fmt(S.dayDate); draw(); onPick(); });
+  };
+  prev.onclick = () => { vm = new Date(vm.getFullYear(), vm.getMonth()-1, 1); draw(); };
+  nxt.onclick = () => { vm = new Date(vm.getFullYear(), vm.getMonth()+1, 1); draw(); };
+  draw();
+}
+function mountWheel(col, values, startIdx, onChange){
+  const H = 44;
+  col.innerHTML = '<i class="sp"></i>' + values.map((v,i)=>`<div data-i="${i}">${v}</div>`).join('') + '<i class="sp"></i>';
+  const items = [...col.querySelectorAll('div')];
+  const idx = () => Math.max(0, Math.min(values.length-1, Math.round(col.scrollTop / H)));
+  const mark = () => { const k = idx(); items.forEach((el,i)=>el.classList.toggle('on', i===k)); return k; };
+  let t; col.addEventListener('scroll', () => { mark(); clearTimeout(t); t = setTimeout(()=>onChange(mark()), 120); }, {passive:true});
+  items.forEach((el,i) => el.onclick = () => col.scrollTo({top:i*H, behavior:'smooth'}));
+  col.onkeydown = e => { if(e.key==='ArrowDown'){ e.preventDefault(); col.scrollBy({top:H, behavior:'smooth'}); } if(e.key==='ArrowUp'){ e.preventDefault(); col.scrollBy({top:-H, behavior:'smooth'}); } };
+  col.scrollTop = startIdx * H; mark();
+}
 function whenStep(){
-  const days = dayOptions();
-  const times = [["Morning","10:00"],["Lunch","13:00"],["Afternoon","15:00"],["Evening","19:00"],["Late","20:30"]];
   view(`
     <div class="eyebrow">When</div>
     <h1>When is this happening?</h1>
-    <p class="lede">Plans with a date happen. Plans without one don't.</p>
-    <div class="chips" id="days">${days.map((d,i)=>`<button class="chip" data-i="${i}">${d[0]}${d[1]?` · ${fmt(d[1])}`:''}</button>`).join('')}</div>
-    <input type="date" id="date" hidden>
-    <div class="eyebrow" style="margin-top:6px">Time</div>
-    <div class="chips" id="times">${times.map(t=>`<button class="chip" data-v="${t[1]}">${t[0]} · ${t[1]}</button>`).join('')}<button class="chip" data-v="">Other time</button></div>
-    <input type="time" id="time" hidden>
+    <p class="lede">Pick a day and a time. Plans with a date happen.</p>
+    ${calendarHTML()}
+    <div class="wlabel">Time</div>
+    <div class="wheel"><div class="wband"></div><div class="wcol" id="wh" tabindex="0" role="listbox" aria-label="Hour"></div><div class="wsep">:</div><div class="wcol" id="wm" tabindex="0" role="listbox" aria-label="Minute"></div></div>
+    <p class="err" id="whenErr" hidden>That time has already passed today. Pick a later time, or another day.</p>
     <div class="grow"></div>
     <button class="btn" id="go" disabled>Continue</button>`);
-  const dateIn = document.getElementById('date'), timeIn = document.getElementById('time'), go = document.getElementById('go');
-  dateIn.min = isoDate(new Date());
-  S.dayLabel = ""; S.time = null;
-  const ready = () => { go.disabled = !(S.dayLabel && S.time); };
-  app.querySelectorAll('#days .chip').forEach(c => c.onclick = () => {
-    app.querySelectorAll('#days .chip').forEach(x=>x.classList.remove('sel')); c.classList.add('sel');
-    const d = days[+c.dataset.i];
-    if(d[1]){ S.dayDate = d[1]; S.dayLabel = fmt(d[1]); dateIn.hidden = true; } else { S.dayLabel = ""; dateIn.hidden = false; dateIn.focus(); }
-    ready();
-  });
-  dateIn.onchange = () => { if(dateIn.value){ S.dayDate = new Date(dateIn.value+'T12:00'); S.dayLabel = fmt(S.dayDate); } else S.dayLabel = ""; ready(); };
-  app.querySelectorAll('#times .chip').forEach(c => c.onclick = () => {
-    app.querySelectorAll('#times .chip').forEach(x=>x.classList.remove('sel')); c.classList.add('sel');
-    if(c.dataset.v){ S.time = c.dataset.v; timeIn.hidden = true; } else { S.time = timeIn.value || null; timeIn.hidden = false; timeIn.focus(); }
-    ready();
-  });
-  timeIn.oninput = () => { S.time = timeIn.value || null; ready(); };
+  const go = document.getElementById('go'), whenErr = document.getElementById('whenErr');
+  const isPast = () => !!(S.dayDate && S.time) && new Date(isoDate(S.dayDate) + 'T' + S.time) <= new Date();
+  const ready = () => { const past = isPast(); whenErr.hidden = !past; go.disabled = !(S.dayDate && S.time) || past; };
+  mountCalendar(ready);
+  const HRS = Array.from({length:24},(_,i)=>String(i).padStart(2,'0')), MINS = Array.from({length:12},(_,i)=>String(i*5).padStart(2,'0'));
+  if(!S.time) S.time = '19:00';
+  let [hh, mm] = S.time.split(':');
+  const setTime = () => { S.time = hh + ':' + mm; ready(); };
+  mountWheel(document.getElementById('wh'), HRS, Math.max(0, HRS.indexOf(hh)), i => { hh = HRS[i]; setTime(); });
+  mountWheel(document.getElementById('wm'), MINS, Math.max(0, MINS.indexOf(String(Math.round(+mm/5)*5 % 60).padStart(2,'0'))), i => { mm = MINS[i]; setTime(); });
+  ready();
   go.onclick = () => { track('plan_when',{day:S.dayLabel, time:S.time}); next(); };
 }
 function freqStep(){
   const dn = (S.dayDate || new Date()).toLocaleDateString('en-GB',{weekday:'long'});
   const keys = Object.keys(FREQS);
-  const sub = { once:'Just ' + esc(S.dayLabel), weekly: dn + 's at ' + esc(S.time||''), fortnightly:'Every other ' + dn, monthly:'Once a month, around this date' };
+  const sub = { once:'Just ' + esc(S.dayLabel), weekly: dn + 's at ' + esc(S.time||''), monthly:'Once a month, around this date' };
   view(`
     <div class="eyebrow">How often</div>
     <h1>One time, or make it <em>your thing</em>?</h1>
@@ -492,28 +518,58 @@ function freqStep(){
     <div class="opts">${keys.map(k=>`<button class="opt"><span>${FREQS[k].t}${k==='weekly'?'<span class="tag">Fits your challenge</span>':''}<small>${sub[k]}</small></span></button>`).join('')}</div>`);
   bindOpts(i => { S.freq = keys[i]; track('plan_frequency',{freq:S.freq}); }, S.freq ? keys.indexOf(S.freq) : -1);
 }
+function ageRange(dt){
+  const t = new Date(); let a = t.getFullYear() - dt.getFullYear();
+  if(t.getMonth() < dt.getMonth() || (t.getMonth()===dt.getMonth() && t.getDate() < dt.getDate())) a--;
+  return a < 18 ? 'Under 18' : a <= 20 ? '18–20' : a <= 24 ? '21–24' : a <= 29 ? '25–29' : a <= 34 ? '30–34' : '35+';
+}
 function lockIn(){
-  const nd = nextDates(3);
+  const nd = nextDates(3), yNow = new Date().getFullYear();
+  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const P = S.dobParts || {};
+  const opt = (v, t, cur) => `<option value="${v}"${String(cur)===String(v)?' selected':''}>${t}</option>`;
   view(`
     <div class="eyebrow">Check it over</div>
     <h1>Let's make it real.</h1>
     <div class="panel">
       <div class="kv"><span>What</span><b>${esc(expT())}</b></div>
+      
       <div class="kv"><span>Where</span><b>${esc(placeLabel())}</b></div>
       <div class="kv"><span>When</span><b>${esc(S.dayLabel)} · ${esc(S.time||'')}</b></div>
       <div class="kv"><span>How often</span><b>${FREQS[S.freq||'once'].short}</b></div>
     </div>
     ${nd.length>1 ? `<div class="eyebrow">Your next dates</div><div class="chips">${nd.map(d=>`<span class="chip static">${fmt(d)}</span>`).join('')}</div>` : ''}
     <label class="field" for="name">Your first name, so we can save your plan<input type="text" id="name" autocomplete="given-name" placeholder="e.g. Favour" value="${esc(S.name)}"></label>
-    <div class="eyebrow" style="margin-top:4px">Your age</div>
-    <div class="chips" id="ages">${["18–20","21–24","25–29","30–34","35+"].map(a=>`<button class="chip${S.age===a?' sel':''}">${a}</button>`).join('')}</div>
+    <div class="eyebrow" style="margin-top:4px">Date of birth</div>
+    <div class="dob">
+      <select id="dd" aria-label="Day" autocomplete="bday-day">${opt('','Day',P.d)}${Array.from({length:31},(_,i)=>opt(i+1,i+1,P.d)).join('')}</select>
+      <select id="dm" aria-label="Month" autocomplete="bday-month">${opt('','Month',P.m)}${months.map((m,i)=>opt(i+1,m,P.m)).join('')}</select>
+      <select id="dy" aria-label="Year" autocomplete="bday-year">${opt('','Year',P.y)}${Array.from({length:78},(_,i)=>opt(yNow-13-i,yNow-13-i,P.y)).join('')}</select>
+    </div>
+    <p class="err" id="dobErr" hidden>That date doesn't exist. Check the day and month.</p>
     <div class="grow"></div>
-    <button class="btn" id="go" ${S.name && S.age?'':'disabled'}>Lock it in</button>`);
-  const i = document.getElementById('name'), g = document.getElementById('go');
-  const ready = () => { g.disabled = !(i.value.trim() && S.age); };
-  i.oninput = ready;
-  app.querySelectorAll('#ages .chip').forEach(c => c.onclick = () => { app.querySelectorAll('#ages .chip').forEach(x=>x.classList.remove('sel')); c.classList.add('sel'); S.age = c.textContent; ready(); });
-  g.onclick = () => { S.name = i.value.trim().split(' ')[0]; track('plan_locked', planPayload()); commit(); next(); };
+    <button class="btn" id="go" disabled>Looks good</button>`);
+  const i = document.getElementById('name'), g = document.getElementById('go'), err = document.getElementById('dobErr');
+  const dd = document.getElementById('dd'), dm = document.getElementById('dm'), dy = document.getElementById('dy');
+  const dob = () => { const d=+dd.value, m=+dm.value, y=+dy.value; if(!d||!m||!y) return null; const dt = new Date(y, m-1, d, 12); return dt.getMonth()===m-1 ? dt : 'bad'; };
+  let blockedLogged = false;
+  const ready = () => {
+    const v = dob(), bad = v === 'bad', young = !!v && !bad && ageRange(v) === 'Under 18';
+    err.hidden = !(bad || young);
+    err.textContent = young ? "Fliq.it is for people aged 18 and over, so we can't build this plan for you yet." : "That date doesn't exist. Check the day and month.";
+    if(young){ S.dob = null; S.age = null; Fliq.clearHandoff(); if(!blockedLogged){ blockedLogged = true; track('under_18_blocked'); } }
+    g.disabled = !(i.value.trim() && v && !bad && !young);
+  };
+  i.oninput = ready; [dd,dm,dy].forEach(el => el.onchange = ready);
+  i.onkeydown = e => { if(e.key==='Enter' && !g.disabled) g.click(); };
+  ready();
+  g.onclick = () => {
+    const v = dob();
+    if(!v || v === 'bad' || ageRange(v) === 'Under 18') return;
+    S.name = i.value.trim().split(' ')[0];
+    S.dobParts = {d:dd.value, m:dm.value, y:dy.value}; S.dob = isoDate(v); S.age = ageRange(v);
+    track('plan_locked', planPayload()); commit(); next();
+  };
 }
 async function buildPlan(){
   const id = E.nextRun();
@@ -586,13 +642,13 @@ function weekGrid(){
 function shareText(){
   const p = S.place || {};
   const where = p.type==='online' ? ' online' : p.type==='home' ? ' at home' : p.name ? ' at ' + p.name : '';
-  const often = {weekly:" Making it a weekly thing.", fortnightly:" Every other week from now on.", monthly:" Once a month from now on."}[S.freq] || "";
+  const often = {weekly:" Making it a weekly thing.", monthly:" Once a month from now on."}[S.freq] || "";
   return `Taking myself on a solo date: ${expT().toLowerCase()}${where}, ${S.dayLabel} at ${S.time || ''}.${often} Holding myself to it.`;
 }
 function planReady(){
   view(`
     <div class="eyebrow">It's happening</div>
-    <h1>Your first solo plan is locked in.</h1>
+    <h1>Your first solo plan is ready.</h1>
     <div class="ticket">
       <div class="t-top"><small>Just you, ${N()}</small><strong>${esc(expT())}</strong></div>
       <div class="t-cut"></div>
@@ -607,7 +663,7 @@ function planReady(){
     <div class="msg" id="msg">${esc(shareText())}</div>
     <button class="copy" id="copy">Copy for your story</button>
     <div class="grow"></div>
-    <button class="btn" id="go">Keep it in Fliq.it</button>`);
+    <button class="btn" id="go">Continue</button>`);
   btn('copy', async ev => {
     const b = ev.currentTarget;
     try{ await navigator.clipboard.writeText(shareText()); b.textContent = 'Copied'; }
@@ -638,7 +694,7 @@ function appStep(){
          <p class="err" id="wlerr" hidden></p>
          <button class="btn" id="wlgo">Join the early-access list</button>
          <p class="fine">By joining, you agree we can email you about the launch. See our <a href="${CONFIG.PRIVACY_URL}" target="_blank" rel="noopener">privacy policy</a>.</p>`}
-    ${link ? `<a class="btn alt" id="dl" href="${esc(link)}">Open in Fliq.it</a>` : ''}
+    ${link ? `<a class="btn alt" id="dl" href="${esc(link)}">Lock in my plan on Fliq.it</a>` : ''}
     <a class="btn ghost" href="/friends-quiz/" id="other">Now try the Friends quiz</a>`);
   btn('wlgo', async () => {
     const b = document.getElementById('wlgo');

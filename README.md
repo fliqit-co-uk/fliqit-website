@@ -49,18 +49,18 @@ When someone locks in a plan, the funnel saves a **handoff** to `localStorage` (
   "v": 1, "id": "uuid", "source": "web_funnel", "created_at": "ISO", "timezone": "Europe/London", "locale": "en-GB",
   "funnel": { "id": "friend_type", "mode": "friends" },
   "profile": { "type": "reconnect", "name": "The Reconnector" },
-  "user": { "first_name": "Favour", "age_range": "25–29" },
+  "user": { "first_name": "Favour", "dob": "1999-02-14", "age_range": "25–29" },
   "invitee": { "first_name": "Sarah", "relationship": "My best friend", "on_fliq": false },
   "plan": {
     "mode": "friends|solo", "title": "Coffee, phones away", "activity": "coffee|custom|…",
     "place": { "type": "out|home|online", "name": "Gail's Bakery" },
     "start_date": "2026-10-31", "start_time": "10:00", "start_at": "2026-10-31T10:00",
     "duration_minutes": 90, "energy": "low|mid|high",
-    "recurrence": "once|weekly|fortnightly|monthly", "rrule": "FREQ=WEEKLY;INTERVAL=1",
+    "recurrence": "once|weekly|monthly", "rrule": "FREQ=WEEKLY;INTERVAL=1",
     "invite_message": "…"
   },
   "challenge": { "id": "friends_8_week", "weeks": 8, "planned_weeks": [1], "start_date": "2026-10-31" },
-  "reminders": { "day_before": true, "invitee": true },
+  "reminders": { "day_before": true },
   "attribution": { "how_found": "TikTok", "referrer": "host|null", "utm_source": "…" },
   "consent": { "waitlist": true }
 }
@@ -69,12 +69,14 @@ When someone locks in a plan, the funnel saves a **handoff** to `localStorage` (
 Notes for the app side:
 
 - `start_at` is local wall-clock time. Interpret it with `timezone`. If it's already in the past when the app opens, ask the user to pick a new time.
-- `invitee` (friends only) is a name, not a user. The app has to create a pending invite (share link / contact), not a normal invite.
-- `recurrence: "fortnightly"` has no equivalent in the app today (friends support daily/weekly/monthly; solo plans have no recurrence). Map it or add it.
+- `invitee` (friends only) is a name, not a user. The funnel only shows the invite message with a Copy button (the person pastes it into WhatsApp or a text). Sending invites inside the app isn't built yet, so the app should create the plan and let the user invite the friend afterwards.
+- `recurrence` is `once`, `weekly` or `monthly` (fortnightly was removed from the funnels). Friends plans support these in the app; Solo plans have no recurrence yet.
+- `dob` is a full date of birth (`YYYY-MM-DD`). It lives in the handoff only. Analytics gets `age_range` (`18–20`, `21–24`, `25–29`, `30–34`, `35+`). Under-18s are blocked at that step: no plan is created and no handoff is saved (an `under_18_blocked` analytics event is sent, with no personal data).
+- Date is picked on a calendar (up to 6 months ahead; times already passed today are blocked) and time on an hour/minute wheel in 5-minute steps, defaulting to 19:00.
 - `energy` uses the app's `low | mid | high`. The app's required `mood` and `color` are not collected here; pick sensible defaults.
 - No email in the handoff. The app knows the account email.
-- Names and free text (custom plan or place) are in the handoff only. Analytics events (`window.dataLayer`) carry categories only.
+- Names, date of birth and free text (custom plan or place) are in the handoff only. Analytics events (`window.dataLayer`) carry categories only.
 
-To switch on the app link once a store / deferred-deep-link URL exists, set `CONFIG.APP_LINK_BASE` in `funnel/core.js`. `Fliq.appLink(handoff)` then appends `fliq_handoff=<base64url JSON>` and the final screen shows an "Open in Fliq.it" button. Passing the whole payload in a URL is fine for a prototype, but a short `id` that the app exchanges with the backend is more robust (length limits, privacy). See the questions below if that's the plan.
+To switch on the app link once a store / deferred-deep-link URL exists, set `CONFIG.APP_LINK_BASE` in `funnel/core.js`. `Fliq.appLink(handoff)` then appends `fliq_handoff=<base64url JSON>` and the final screen shows a "Lock in my plan on Fliq.it" button. Passing the whole payload in a URL is fine for a prototype, but a short `id` that the app exchanges with the backend is more robust (length limits, privacy). See the questions below if that's the plan.
 
 Testing locally: serve the folder (for example `python3 -m http.server 8099`) and open `/solo-quiz/`. Use a stubbed `fetch` or a throwaway email, because the waitlist call hits production.

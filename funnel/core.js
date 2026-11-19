@@ -156,7 +156,7 @@
   /* ---------- the step engine ---------- */
   function createEngine(opts) {
     const mode = opts.mode, S = opts.S;
-    const KEY = 'fliq_funnel_progress_v1_' + mode;
+    const KEY = 'fliq_funnel_progress_v2_' + mode;
     const steps = [];
     const app = $('#app'), back = $('#back'), rail = $('#rail'), foot = $('#foot');
     let step = 0, runId = 0, modalEl = null;
