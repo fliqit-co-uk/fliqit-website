@@ -7,7 +7,7 @@ const { USER_COUNT, EXPERT, TESTIMONIALS } = CONFIG;
 const MODE = 'solo';
 const track = (event, props) => Fliq.track(MODE, event, props);
 
-const S = { name:"", age:null, dob:null, dobParts:null, a:{}, src:null, pop:{}, email:"", joined:false, handoffId:null, exp:null, customExp:"", place:null, freq:null, dayLabel:"", dayDate:null, time:null, profile:null };
+const S = { name:"", age:null, dobParts:null, a:{}, src:null, pop:{}, email:"", joined:false, handoffId:null, exp:null, customExp:"", place:null, freq:null, dayLabel:"", dayDate:null, time:null, profile:null };
 const E = Fliq.createEngine({ mode: MODE, S });
 const { view, bindOpts, btn, ask, closeModal, next } = E;
 const app = Fliq.$('#app');
@@ -54,11 +54,11 @@ const REVEAL = {
   explorer:{strength:"You notice the world. Anywhere new feels like an adventure.",
     blind:"You save places on TikTok and never go. The list keeps growing, and so does the gap.",
     cost:"A city full of places you've been meaning to try.",
-    fix:[["Saved ideas, booked","Turn your list into solo dates with a day and a time."],["Spontaneous mode","Something new to do nearby, in the next hour."],["A weekly adventure","One new place a week, on repeat."]]},
+    fix:[["Saved ideas, booked","Turn your list into solo dates with a day and a time."],["A date attached","Stop saving places. Put one in the diary."],["A weekly adventure","One new place a week, on repeat."]]},
   plusone:{strength:"You're warm, social and fun to be around.",
     blind:"You put your life on hold until someone's free to come.",
     cost:"Saying no to things you want, just because you'd be doing them alone.",
-    fix:[["Easy first solo dates","Low-pressure plans that make going alone feel normal."],["Waves","Do something at the same moment as other people, so alone never feels lonely."],["Invite someone, if you want","Turn any solo plan into a plan with a friend."]]},
+    fix:[["Easy first solo dates","Low-pressure plans that make going alone feel normal."],["Go anyway","The plan still happens when nobody else can come."],["A plan that sticks","A day and a time, so it doesn't depend on company."]]},
   achiever:{strength:"You're driven and disciplined, and you get things done.",
     blind:"Even your downtime has targets. Nothing is just for fun anymore.",
     cost:"Ticking every box and still feeling like you're missing something.",
@@ -70,7 +70,7 @@ const REVEAL = {
   main:{strength:"You romanticise your life, and you're good at it.",
     blind:"You only go when the mood, the outfit and the weather are perfect, so it rarely happens.",
     cost:"Years that blur together, with only a few days that felt like yours.",
-    fix:[["Magic Build","A solo date planned around your mood in seconds."],["A recurring solo date","Same time every week, whatever the weather."],["Ideas worth dressing up for","New spots that make the moment feel special."]]}
+    fix:[["A plan for the mood you're in","Pick something that fits how you feel today."],["A recurring solo date","Same time every week, whatever the weather."],["Ideas worth dressing up for","New spots that make the moment feel special."]]}
 };
 
 const BA = {
@@ -100,7 +100,7 @@ const FREQS = {
   weekly:{t:"Every week", short:"Weekly", rrule:"FREQ=WEEKLY;INTERVAL=1", every:1},
   monthly:{t:"Every month", short:"Monthly", rrule:"FREQ=MONTHLY;INTERVAL=1", every:4}
 };
-/* The 8-week Solo challenge. Week 1 is booked here; weeks 2-8 unlock one at a time in the app. */
+/* Upcoming check-in prompts for a recurring solo plan (not used for one-off plans). */
 const WEEKS = [
   ["The first date","The plan you just made."],
   ["Somewhere new","A place you've never been."],
@@ -130,10 +130,10 @@ function planPayload(){
 function handoff(){
   const f = FREQS[S.freq||'once'], d = S.dayDate ? isoDate(S.dayDate) : null;
   const custom = S.exp === 'custom';
-  return Fliq.buildHandoff(S, {
+  const payload = {
     funnel: { id:'solo_type', mode:'solo' },
     profile: { type: S.profile, name: S.profile ? PROFILES[S.profile].name : null },
-    user: { first_name: S.name || null, dob: S.dob || null, age_range: S.age || null },
+    user: { first_name: S.name || null, age_range: S.age || null },
     plan: {
       mode: 'solo',
       title: expT(),
@@ -145,9 +145,9 @@ function handoff(){
       energy: custom ? 'mid' : ENERGY[S.exp],
       recurrence: S.freq || 'once', rrule: f.rrule,
     },
-    challenge: { id: 'solo_8_week', weeks: 8, planned_weeks: [1], start_date: d },
     reminders: { day_before: !!S.pop.p3 },
-  });
+  };
+  return Fliq.buildHandoff(S, payload);
 }
 /* Save the latest handoff locally. Called whenever something it contains changes. */
 function commit(){ if(S.dayDate && S.time && S.place && S.name){ const h = handoff(); Fliq.saveHandoff(h); return h; } return null; }
@@ -195,6 +195,61 @@ function readiness(){
 }
 function baselineWeekly(){ return [1.5, 0.4, 0.1, 0.05, 0][S.a.q8 ?? 1]; }
 
+function ageRange(dt){
+  const t = new Date(); let a = t.getFullYear() - dt.getFullYear();
+  if(t.getMonth() < dt.getMonth() || (t.getMonth()===dt.getMonth() && t.getDate() < dt.getDate())) a--;
+  return a < 18 ? 'Under 18' : a <= 20 ? '18–20' : a <= 24 ? '21–24' : a <= 29 ? '25–29' : a <= 34 ? '30–34' : '35+';
+}
+
+const isOnce = () => (S.freq || 'once') === 'once';
+function skipIfOnce(fn){
+  const wrapped = function(){ if(isOnce()){ next(); return; } return fn(); };
+  Object.defineProperty(wrapped, 'name', { value: fn.name || 'screen' });
+  return wrapped;
+}
+
+function ageGate(){
+  const yNow = new Date().getFullYear();
+  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const P = S.dobParts || {};
+  const opt = (v, t, cur) => `<option value="${v}"${String(cur)===String(v)?' selected':''}>${t}</option>`;
+  view(`
+    <div class="eyebrow">Before your results</div>
+    <h1>Confirm you're <em>18 or over</em>.</h1>
+    <p class="lede">Fliq.it is for adults. We use your date of birth to check your age, then only keep an age range — never the full date.</p>
+    <div class="eyebrow" style="margin-top:4px">Date of birth</div>
+    <div class="dob">
+      <select id="dd" aria-label="Day" autocomplete="bday-day">${opt('','Day',P.d)}${Array.from({length:31},(_,i)=>opt(i+1,i+1,P.d)).join('')}</select>
+      <select id="dm" aria-label="Month" autocomplete="bday-month">${opt('','Month',P.m)}${months.map((m,i)=>opt(i+1,m,P.m)).join('')}</select>
+      <select id="dy" aria-label="Year" autocomplete="bday-year">${opt('','Year',P.y)}${Array.from({length:78},(_,i)=>opt(yNow-13-i,yNow-13-i,P.y)).join('')}</select>
+    </div>
+    <p class="err" id="dobErr" hidden></p>
+    <div class="grow"></div>
+    <button class="btn" id="go" disabled>Continue</button>`);
+  const g = document.getElementById('go'), err = document.getElementById('dobErr');
+  const dd = document.getElementById('dd'), dm = document.getElementById('dm'), dy = document.getElementById('dy');
+  const dob = () => { const d=+dd.value, m=+dm.value, y=+dy.value; if(!d||!m||!y) return null; const dt = new Date(y, m-1, d, 12); return dt.getMonth()===m-1 ? dt : 'bad'; };
+  let blockedLogged = false;
+  const ready = () => {
+    const v = dob(), bad = v === 'bad', young = !!v && !bad && ageRange(v) === 'Under 18';
+    err.hidden = !(bad || young);
+    err.textContent = young ? "Fliq.it is for people aged 18 and over, so we can't continue." : "That date doesn't exist. Check the day and month.";
+    if(young){ S.age = null; S.dobParts = null; Fliq.clearHandoff(); if(!blockedLogged){ blockedLogged = true; track('under_18_blocked'); } }
+    g.disabled = !(v && !bad && !young);
+  };
+  [dd,dm,dy].forEach(el => el.onchange = ready);
+  ready();
+  g.onclick = () => {
+    const v = dob();
+    if(!v || v === 'bad' || ageRange(v) === 'Under 18') return;
+    S.dobParts = {d:dd.value, m:dm.value, y:dy.value};
+    S.age = ageRange(v);
+    // Age range only — never keep or hand off the full date of birth
+    track('age_confirmed', {age_range: S.age});
+    next();
+  };
+}
+
 /* ---------- Steps ---------- */
 const add = E.add;
 add(-1, landing);
@@ -207,6 +262,7 @@ add(0, sourceStep);
 if(EXPERT) add(0, expertStep);
 if(TESTIMONIALS.length) add(0, wallStep);
 add(1, ringLoader, {transient:true, name:'ring_loader'});
+add(1, ageGate, {name:'age_gate'});
 add(1, emailGate, {name:'email_gate'});
 add(1, summary);
 add(1, insight);
@@ -218,8 +274,8 @@ add(2, whenStep);
 add(2, freqStep);
 add(2, lockIn);
 add(2, buildPlan, {transient:true, name:'build_plan'});
-add(2, challengeReady);
-add(2, weekGrid);
+add(2, skipIfOnce(challengeReady), {name:'recurrence_ready'});
+add(2, skipIfOnce(weekGrid), {name:'checkin_preview'});
 add(2, planReady);
 add(2, appStep, {name:'waitlist'});
 
@@ -379,7 +435,7 @@ function beforeAfter(){
   view(`
     <div class="eyebrow">If nothing changes</div>
     <h1>${REVEAL[S.profile].cost}</h1>
-    <p class="lede">It doesn't have to go that way. Here's where you could be in eight weeks.</p>
+    <p class="lede">It doesn't have to go that way. Here's where a regular plan could take you.</p>
     <div class="ba">
       <div class="now"><h3>You now</h3><ul>${rows.map(r=>`<li><b>${r[0]}</b><span>${r[1]}</span></li>`).join('')}</ul></div>
       <div class="then"><h3>You with Fliq.it</h3><ul>${rows.map(r=>`<li><b>${r[2]}</b><span>${r[3]}</span></li>`).join('')}</ul></div>
@@ -515,68 +571,43 @@ function freqStep(){
     <div class="eyebrow">How often</div>
     <h1>One time, or make it <em>your thing</em>?</h1>
     <p class="lede">A small ritual you keep coming back to does more for you than one big day off.</p>
-    <div class="opts">${keys.map(k=>`<button class="opt"><span>${FREQS[k].t}${k==='weekly'?'<span class="tag">Fits your challenge</span>':''}<small>${sub[k]}</small></span></button>`).join('')}</div>`);
+    <div class="opts">${keys.map(k=>`<button class="opt"><span>${FREQS[k].t}${k==='weekly'?'<span class="tag">Builds a rhythm</span>':''}<small>${sub[k]}</small></span></button>`).join('')}</div>`);
   bindOpts(i => { S.freq = keys[i]; track('plan_frequency',{freq:S.freq}); }, S.freq ? keys.indexOf(S.freq) : -1);
 }
-function ageRange(dt){
-  const t = new Date(); let a = t.getFullYear() - dt.getFullYear();
-  if(t.getMonth() < dt.getMonth() || (t.getMonth()===dt.getMonth() && t.getDate() < dt.getDate())) a--;
-  return a < 18 ? 'Under 18' : a <= 20 ? '18–20' : a <= 24 ? '21–24' : a <= 29 ? '25–29' : a <= 34 ? '30–34' : '35+';
-}
 function lockIn(){
-  const nd = nextDates(3), yNow = new Date().getFullYear();
-  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  const P = S.dobParts || {};
-  const opt = (v, t, cur) => `<option value="${v}"${String(cur)===String(v)?' selected':''}>${t}</option>`;
+  const nd = nextDates(3);
   view(`
     <div class="eyebrow">Check it over</div>
     <h1>Let's make it real.</h1>
     <div class="panel">
       <div class="kv"><span>What</span><b>${esc(expT())}</b></div>
-      
       <div class="kv"><span>Where</span><b>${esc(placeLabel())}</b></div>
       <div class="kv"><span>When</span><b>${esc(S.dayLabel)} · ${esc(S.time||'')}</b></div>
       <div class="kv"><span>How often</span><b>${FREQS[S.freq||'once'].short}</b></div>
     </div>
     ${nd.length>1 ? `<div class="eyebrow">Your next dates</div><div class="chips">${nd.map(d=>`<span class="chip static">${fmt(d)}</span>`).join('')}</div>` : ''}
     <label class="field" for="name">Your first name, so we can save your plan<input type="text" id="name" autocomplete="given-name" placeholder="e.g. Favour" value="${esc(S.name)}"></label>
-    <div class="eyebrow" style="margin-top:4px">Date of birth</div>
-    <div class="dob">
-      <select id="dd" aria-label="Day" autocomplete="bday-day">${opt('','Day',P.d)}${Array.from({length:31},(_,i)=>opt(i+1,i+1,P.d)).join('')}</select>
-      <select id="dm" aria-label="Month" autocomplete="bday-month">${opt('','Month',P.m)}${months.map((m,i)=>opt(i+1,m,P.m)).join('')}</select>
-      <select id="dy" aria-label="Year" autocomplete="bday-year">${opt('','Year',P.y)}${Array.from({length:78},(_,i)=>opt(yNow-13-i,yNow-13-i,P.y)).join('')}</select>
-    </div>
-    <p class="err" id="dobErr" hidden>That date doesn't exist. Check the day and month.</p>
     <div class="grow"></div>
-    <button class="btn" id="go" disabled>Looks good</button>`);
-  const i = document.getElementById('name'), g = document.getElementById('go'), err = document.getElementById('dobErr');
-  const dd = document.getElementById('dd'), dm = document.getElementById('dm'), dy = document.getElementById('dy');
-  const dob = () => { const d=+dd.value, m=+dm.value, y=+dy.value; if(!d||!m||!y) return null; const dt = new Date(y, m-1, d, 12); return dt.getMonth()===m-1 ? dt : 'bad'; };
-  let blockedLogged = false;
-  const ready = () => {
-    const v = dob(), bad = v === 'bad', young = !!v && !bad && ageRange(v) === 'Under 18';
-    err.hidden = !(bad || young);
-    err.textContent = young ? "Fliq.it is for people aged 18 and over, so we can't build this plan for you yet." : "That date doesn't exist. Check the day and month.";
-    if(young){ S.dob = null; S.age = null; Fliq.clearHandoff(); if(!blockedLogged){ blockedLogged = true; track('under_18_blocked'); } }
-    g.disabled = !(i.value.trim() && v && !bad && !young);
-  };
-  i.oninput = ready; [dd,dm,dy].forEach(el => el.onchange = ready);
+    <button class="btn" id="go" ${S.name?'':'disabled'}>Looks good</button>`);
+  const i = document.getElementById('name'), g = document.getElementById('go');
+  const ready = () => { g.disabled = !i.value.trim(); };
+  i.oninput = ready;
   i.onkeydown = e => { if(e.key==='Enter' && !g.disabled) g.click(); };
   ready();
   g.onclick = () => {
-    const v = dob();
-    if(!v || v === 'bad' || ageRange(v) === 'Under 18') return;
     S.name = i.value.trim().split(' ')[0];
-    S.dobParts = {d:dd.value, m:dm.value, y:dy.value}; S.dob = isoDate(v); S.age = ageRange(v);
     track('plan_locked', planPayload()); commit(); next();
   };
 }
 async function buildPlan(){
   const id = E.nextRun();
-  const labels = ["Your solo map","Eight weeks of plans","Your weekly rhythm"];
+  const once = isOnce();
+  const labels = once
+    ? ["Your solo plan","A day and a time","A reminder, if you want"]
+    : ["Your solo plan","Your recurring rhythm","Check-in slots"];
   view(`
     <div class="eyebrow">Almost done</div>
-    <h1>Creating your <em>8-week Solo challenge</em>, ${N()}</h1>
+    <h1>${once ? `Saving your <em>solo plan</em>, ${N()}` : `Setting up your <em>recurring solo plan</em>, ${N()}`}</h1>
     <div class="bars">${labels.map((l,i)=>`<div class="bar"><b id="b${i}"></b><span>${l}</span><em id="e${i}"></em></div>`).join('')}</div>
     <div class="grow"></div>`);
   const fill = async i => { const b=document.getElementById('b'+i); if(!b) return false; b.style.width='100%'; await wait(950); if(id!==E.runId()) return false; document.getElementById('e'+i).textContent='Done'; return true; };
@@ -588,52 +619,32 @@ async function buildPlan(){
   await wait(350); if(id===E.runId()) next();
 }
 function challengeReady(){
-  const h = expH(), fq = FREQS[S.freq||'once'], every = fq.every || 1;
-  const start = S.dayDate || nextDow(6,1);
-  const end = new Date(start); end.setDate(end.getDate()+49);
-  const plan = [], base = [];
-  for(let w=0; w<=8; w++){ plan.push(+(Math.ceil(w/every)*h).toFixed(1)); base.push(+(w*baselineWeekly()).toFixed(1)); }
-  const max = Math.max(4, Math.ceil(plan[8]/4)*4);
-  const W=320, H=170, L=30, Rt=10, T=14, B=26;
-  const x = i => L + (W-L-Rt)*i/8, y = v => T + (H-T-B)*(1 - v/max);
-  const path = arr => arr.map((v,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-  const area = path(plan) + ` L${x(8)},${y(0)} L${x(0)},${y(0)} Z`;
-  const ticks = [0, max/2, max];
+  const fq = FREQS[S.freq||'once'];
+  const dates = nextDates(8);
+  const start = dates[0] || S.dayDate || nextDow(6,1);
+  const end = dates[dates.length-1] || start;
   view(`
-    <div class="eyebrow">${N()}, your challenge is ready</div>
-    <h1>Eight weeks of time <em>just for you</em>.</h1>
-    <span class="datechip">${fmt(start)} to ${fmtLong(end)}</span>
-    <div class="chartbox">
-      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Hours just for you over eight weeks">
-        <defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B9A0FF" stop-opacity=".35"/><stop offset="1" stop-color="#B9A0FF" stop-opacity="0"/></linearGradient></defs>
-        ${ticks.map(t=>`<line x1="${L}" x2="${W-Rt}" y1="${y(t)}" y2="${y(t)}" stroke="rgba(236,226,255,.1)"/><text x="${L-6}" y="${y(t)+4}" text-anchor="end" font-size="10" fill="#7E7499">${t}h</text>`).join('')}
-        ${[0,2,4,6,8].map(w=>`<text x="${x(w)}" y="${H-8}" text-anchor="middle" font-size="10" fill="#7E7499">${w?'Wk '+w:'Now'}</text>`).join('')}
-        <path d="${area}" fill="url(#ga)"/>
-        <path d="${path(base)}" fill="none" stroke="#7E7499" stroke-width="2" stroke-dasharray="4 4"/>
-        <path id="pl" d="${path(plan)}" fill="none" stroke="#B9A0FF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="${x(0)}" cy="${y(0)}" r="5" fill="#FF9BBB" stroke="#120D20" stroke-width="2"/>
-        <circle cx="${x(8)}" cy="${y(plan[8])}" r="6" fill="#B9A0FF" stroke="#120D20" stroke-width="2"/>
-        <text x="${x(8)-8}" y="${y(plan[8])-10}" text-anchor="end" font-size="12" font-weight="700" fill="#F3EEFF">${plan[8]} hours for you</text>
-      </svg>
-      <div class="legend"><span><i></i>With your plan</span><span><i class="dash"></i>If nothing changes</span></div>
+    <div class="eyebrow">${N()}, your recurring plan is ready</div>
+    <h1>One plan. <em>Check-ins</em> that keep it going.</h1>
+    <p class="lede">Fliq.it keeps this as a single ${fq.short.toLowerCase()} plan. Each date below is a check-in you can complete in the app — you'll choose how many when you open it.</p>
+    <span class="datechip">${fmt(start)}${dates.length>1 ? ' onwards' : ''}</span>
+    <div class="panel">
+      ${dates.slice(0,6).map((d,i)=>`<div class="kv"><span>Check-in ${i+1}</span><b>${fmt(d)} · ${esc(S.time||'')}</b></div>`).join('')}
+      ${dates.length>6 ? `<div class="kv"><span>And more</span><b>${dates.length-6} further dates</b></div>` : ''}
     </div>
-    <p class="fine">“If nothing changes” uses your answer about the last time you did something just for you. “With your plan” assumes ${fq.every ? esc(expT().toLowerCase()) + ', ' + fq.short.toLowerCase() : 'one plan a week from your challenge'}. An illustration, not a promise.</p>
+    <p class="fine">Preview only. In the app you set how many times this repeats. No separate “challenge” product — just this plan and its check-ins.</p>
     <div class="grow"></div>
-    <button class="btn" id="go">See my eight weeks</button>`);
-  const pl = document.getElementById('pl');
-  if(pl && pl.getTotalLength){ const len = pl.getTotalLength(); pl.style.strokeDasharray=len; pl.style.strokeDashoffset=len; pl.getBoundingClientRect(); pl.style.transition='stroke-dashoffset 1.4s cubic-bezier(.2,.8,.2,1)'; pl.style.strokeDashoffset=0; }
+    <button class="btn" id="go">See the rhythm</button>`);
   btn('go', next);
 }
 function weekGrid(){
-  const f = S.freq || 'once', ev = FREQS[f].every, start = S.dayDate || nextDow(6,1);
-  const dates = {0:start};
-  if(f==='monthly'){ const d = new Date(start); d.setMonth(d.getMonth()+1); dates[Math.round((d-start)/6048e5)] = d; }
-  else if(ev){ for(let i=ev;i<8;i+=ev){ const d = new Date(start); d.setDate(d.getDate()+7*i); dates[i] = d; } }
+  const fq = FREQS[S.freq||'once'];
+  const dates = nextDates(8);
   view(`
-    <div class="eyebrow">Your 8-week Solo challenge</div>
-    <h1>Week 1 is planned. The rest happens in <em>Fliq.it</em>.</h1>
-    <p class="lede">${ev ? `Your ${FREQS[f].short.toLowerCase()} ${esc(expT().toLowerCase())} is planned. Each week the app gives it a new twist.` : 'Each week the app unlocks a new prompt. You pick the plan, and Fliq.it reminds you.'}</p>
-    <div class="wgrid">${WEEKS.map(([t,d],i)=>`<div class="wk ${dates[i]?'on':i>3?'dim':''}"><small>Week ${i+1}${dates[i]?' · '+fmt(dates[i]):''}</small><b>${t}</b><span>${dates[i] ? esc(expT())+', planned' : d}</span></div>`).join('')}</div>
+    <div class="eyebrow">Your recurring solo plan</div>
+    <h1>First date planned. Check-ins live in <em>Fliq.it</em>.</h1>
+    <p class="lede">Your ${fq.short.toLowerCase()} ${esc(expT().toLowerCase())} is set. In the app each occurrence is a check-in on this same plan — not a new plan every time.</p>
+    <div class="wgrid">${dates.slice(0,8).map((d,i)=>`<div class="wk ${i===0?'on':i>3?'dim':''}"><small>Check-in ${i+1} · ${fmt(d)}</small><b>${i===0?'First date':WEEKS[Math.min(i,WEEKS.length-1)][0]}</b><span>${i===0 ? esc(expT())+', planned' : WEEKS[Math.min(i,WEEKS.length-1)][1]}</span></div>`).join('')}</div>
     <div class="grow"></div>
     <div class="proof"><div class="faces"><i></i><i></i><i></i></div><span>${proofLine()}</span></div>
     <button class="btn" id="go">Continue</button>`);
@@ -674,18 +685,22 @@ function planReady(){
 }
 function appStep(){
   const h = commit();
-  const typeName = PROFILES[S.profile].name.replace('The ','');
+  const once = isOnce();
   const link = Fliq.appLink(h);   // null until the app is live and CONFIG.APP_LINK_BASE is set
+  const items = [
+    `<li><span class="n">1</span><div><b>It's in your week</b><span>${esc(expT())}, ${esc(placeLabel())}, ${esc(S.dayLabel)} at ${esc(S.time||'')}${!once ? ', ' + FREQS[S.freq].short.toLowerCase() : ''}.${S.pop.p3?' We’ll remind you the day before.':''}</span></div></li>`,
+  ];
+  let n = 2;
+  if(!once){
+    items.push(`<li><span class="n">${n++}</span><div><b>Check-ins on this plan</b><span>Each ${FREQS[S.freq].short.toLowerCase()} date is a check-in on the same plan. You’ll set how many times in the app.</span></div></li>`);
+  }
+  items.push(`<li><span class="n">${n}</span><div><b>Saved for when you join</b><span>Your plan stays on this device for now. When Fliq.it opens, you can bring it into the app.</span></div></li>`);
   view(`
     <div class="eyebrow">Your plan is saved, ${N()}</div>
     <h1>Fliq.it is <em>almost here</em>.</h1>
     <p class="lede">The app isn't live yet. When it opens, this is what's waiting for you.</p>
-    <ul class="list">
-      <li><span class="n">1</span><div><b>It's in your week</b><span>${esc(expT())}, ${esc(placeLabel())}, ${esc(S.dayLabel)} at ${esc(S.time||'')}${S.freq && S.freq!=='once' ? ', ' + FREQS[S.freq].short.toLowerCase() : ''}.${S.pop.p3?' We’ll remind you the day before.':''}</span></div></li>
-      <li><span class="n">2</span><div><b>Plans that match your mood</b><span>Tell Fliq.it how you feel and how much energy you've got. It builds the plan.</span></div></li>
-      <li><span class="n">3</span><div><b>Weeks 2 to 8 of your challenge</b><span>A new prompt each week, ideas picked for ${typeName}s, and a quick check-in after every plan.</span></div></li>
-    </ul>
-    <div class="weeks" aria-label="8-week challenge, week 1 planned">${[1,2,3,4,5,6,7,8].map(w=>`<i class="${w===1?'now':''}">W${w}</i>`).join('')}</div>
+    <ul class="list">${items.join('')}</ul>
+    ${!once ? `<div class="weeks" aria-label="Upcoming check-ins">${[1,2,3,4,5,6,7,8].map(w=>`<i class="${w===1?'now':''}">${w}</i>`).join('')}</div>` : ''}
     <div class="grow"></div>
     <div class="proof"><div class="faces"><i></i><i></i><i></i></div><span>${proofLine()}</span></div>
     ${S.joined

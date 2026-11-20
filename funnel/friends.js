@@ -7,7 +7,7 @@ const { USER_COUNT, EXPERT, TESTIMONIALS } = CONFIG;
 const MODE = 'friends';
 const track = (event, props) => Fliq.track(MODE, event, props);
 
-const S = { name:"", gender:null, age:null, a:{}, src:null, pop:{}, email:"", joined:false, handoffId:null, who:null, friend:"", exp:null, customExp:"", place:null, freq:null, dayLabel:"", dayDate:null, time:null, profile:null };
+const S = { name:"", gender:null, age:null, dobParts:null, a:{}, src:null, pop:{}, email:"", joined:false, handoffId:null, who:null, friend:"", exp:null, customExp:"", place:null, freq:null, dayLabel:"", dayDate:null, time:null, profile:null };
 const E = Fliq.createEngine({ mode: MODE, S });
 const { view, bindOpts, btn, ask, closeModal, next } = E;
 const app = Fliq.$('#app');
@@ -52,7 +52,7 @@ const BA = {
   reconnect:[["“We should catch up”","Said often, rarely booked","A date in the diary","Every single week"],["Months between plans","Without meaning to","A real rhythm","Small plans that keep happening"],["Missing them quietly","Though they're still in your life","Seeing them again","And it feels easy"]],
   heart:[["Always giving","Rarely poured back into","Effort both ways","Plans that look after you too"],["Last on your own list","Everyone else comes first","Your needs count","Plans you actually enjoy"],["Quietly tired","From carrying the care","Feeling held","By people who show up for you"]],
   keeper:[["Doing it all","Chasing every plan","Shared effort","Friends who pick up the thread"],["Group-chat admin","Endless back and forth","Plans that land","One tap and it's set"],["Running on empty","Keeping everyone close","Enjoying it again","Plans you look forward to"]],
-  memory:[["Same old plans","Or none at all","Something new","Every week, for eight weeks"],["Stories fading","The last great day was ages ago","New memories","You'll still talk about in years"],["Ideas left in a note","Never actually booked","Booked and happening","With a date attached"]],
+  memory:[["Same old plans","Or none at all","Something new","A regular plan, not a rare one"],["Stories fading","The last great day was ages ago","New memories","You'll still talk about in years"],["Ideas left in a note","Never actually booked","Booked and happening","With a date attached"]],
   independent:[["Weeks become months","Without noticing","Gentle rhythm","Light plans on your terms"],["Out of the loop","Catching up on everything","In each other's lives","Without constant texting"],["Meaning to reach out","But not yet","Already planned","So you don't have to remember"]]
 };
 
@@ -63,32 +63,32 @@ const REVEAL = {
     strength:"People feel safe with you. When you're in, you're all in.",
     blind:"You wait for the right moment to have a real conversation, and it rarely comes. So even your closest friends mostly get the surface version of you.",
     cost:"Friends who know your news, but not what's actually on your mind.",
-    fix:[["Plans made for talking","Journal nights, long walks and phone-free coffees, suggested for you."],["One-to-ones on repeat","Set a rhythm once so depth stops depending on luck."],["Waves","When someone's going through it, people show up for them, and for you."]]},
+    fix:[["Plans made for talking","Journal nights, long walks and phone-free coffees, suggested for you."],["One-to-ones on repeat","Set a rhythm once so depth stops depending on luck."],["A real date","A day and a time, so the deep chat actually happens."]]},
   reconnect:{
     strength:"You never stop caring. When you do see people, you pick up exactly where you left off.",
     blind:"“We should catch up” might be your most-sent message. It's a promise with no date, and promises with no date don't happen.",
     cost:"Someone who's still technically in your life slowly becomes someone you used to know.",
-    fix:[["Recurring plans","Set it once. Coffee with Sarah, every other Sunday, done."],["Friend streak","See how long it's been, and keep the streak alive before it breaks."],["A date, not a “soon”","Every plan gets a real day, time and place."]]},
+    fix:[["Recurring plans","Set it once. Coffee with Sarah, every Sunday, done."],["A date, not a “soon”","Every plan gets a real day, time and place."],["Copy an invite","Send a message they can reply to, without the group-chat chase."]]},
   heart:{
     strength:"You're the one people call. You remember the little things and you always show up.",
     blind:"You rarely ask for the same back. People don't know you need them, because you never say.",
     cost:"Holding everyone up, and feeling quietly alone while you do it.",
-    fix:[["Their pick","Plans where your friends do the planning for you, for once."],["Waves","Ask people to show up for you, wherever they are in the world."],["Shared plans","Effort that goes both ways, visible to both of you."]]},
+    fix:[["Plans you enjoy too","Choose something that fills you up, not just them."],["Ask for the same back","Put a plan in the diary that looks after you as well."],["Shared plans","Effort that goes both ways, visible to both of you."]]},
   keeper:{
     strength:"Without you, half these friendships would have faded years ago.",
     blind:"You've become the group's unpaid admin, and nobody notices because it works. If you stopped, would anyone else plan?",
     cost:"Resentment builds quietly, and the person who holds everyone together burns out first.",
-    fix:[["Group plans anyone can start","The planning stops living in your head."],["Plans that repeat themselves","Set the ritual once and stop chasing."],["Shared friend streaks","Everyone sees when it's slipping, not just you."]]},
+    fix:[["Plans that land","A real date and place, not endless back and forth."],["Plans that repeat themselves","Set the ritual once and stop chasing."],["Share the load","Invite them into the plan so it isn't only on you."]]},
   memory:{
     strength:"You make life more fun. You're the reason people have stories.",
     blind:"You wait for the big plan. In between, weeks pass with nothing, and your best ideas live in a notes app and never get booked.",
     cost:"Your favourite stories keep getting older.",
-    fix:[["Spontaneous mode","Something good to do tonight, with whoever's free."],["Ideas worth booking","New places and firsts, picked for the two of you."],["A rhythm for adventure","Small plans every week, so it's not one big trip a year."]]},
+    fix:[["Book the idea","Turn the notes-app list into a day and a time."],["Ideas worth booking","New places and firsts, picked for the two of you."],["A rhythm for adventure","Small plans every week, so it's not one big trip a year."]]},
   independent:{
     strength:"Low-maintenance and loyal. Your friendships survive gaps that would end others.",
     blind:"You assume they're fine because you're fine. The gap that feels short to you can feel long to them.",
     cost:"Friends slowly stop including you, and you don't notice until you do.",
-    fix:[["A gentle rhythm","Once a month is enough. Set it and forget it."],["Friend streak","A nudge before a gap turns into drift."],["Low-pressure plans","A call or a walk. No big evening required."]]}
+    fix:[["A gentle rhythm","Once a month is enough. Set it and forget it."],["A light nudge","A reminder for you the day before, so the gap doesn't stretch."],["Low-pressure plans","A call or a walk. No big evening required."]]}
 };
 
 const EXPERIENCES = {
@@ -128,15 +128,14 @@ function planPayload(){
 }
 
 /* The HANDOFF: everything the app needs to create this plan after install. See README "Funnel handoff".
-   The friend is just a name here. They are not a Fliq.it user yet, so the app has to turn this into a
-   pending invite (share link / contact) rather than a normal invite. */
+   The friend is a name only (not on Fliqit yet). Plan is organizer-only; invite is copy/share until they join. */
 function handoff(){
   const f = FREQS[S.freq||'once'], d = S.dayDate ? isoDate(S.dayDate) : null;
   const custom = S.exp === 'custom';
   return Fliq.buildHandoff(S, {
     funnel: { id:'friend_type', mode:'friends' },
     profile: { type: S.profile, name: S.profile ? PROFILES[S.profile].name : null },
-    user: { first_name: S.name || null, dob: S.dob || null, age_range: S.age || null },
+    user: { first_name: S.name || null, age_range: S.age || null },
     invitee: { first_name: S.friend || null, relationship: S.who || null, on_fliq: false },
     plan: {
       mode: 'friends',
@@ -150,7 +149,6 @@ function handoff(){
       recurrence: S.freq || 'once', rrule: f.rrule,
       invite_message: inviteText(),
     },
-    challenge: { id: 'friends_8_week', weeks: 8, planned_weeks: [1], start_date: d },
     reminders: { day_before: !!S.pop.p3 },
   });
 }
@@ -161,16 +159,16 @@ function nextDates(n){
   for(let k=0;k<n;k++){ const d=new Date(S.dayDate); if(S.freq==='monthly') d.setMonth(d.getMonth()+k); else d.setDate(d.getDate()+7*f.every*k); out.push(d); if(!f.every) break; }
   return out;
 }
-/* The 8-week challenge. Week 1 is booked in this funnel; weeks 2-8 unlock one at a time in the app. {f} = friend's name. */
+/* Check-in prompts for a recurring friends plan (skipped for one-off). {f} = friend's name. */
 const WEEKS = [
   ["The first yes","The plan you just made."],
   ["Somewhere new","Go somewhere neither of you has been."],
   ["Go deeper","A plan made for talking properly."],
-  ["Bring someone in","Invite one more friend along."],
   ["Keep it easy","A low-effort plan for a busy week."],
-  ["Their pick","{f} chooses the plan this time."],
   ["Make a memory","Something you'll want a photo of."],
-  ["Make it yours","Choose the ritual you'll keep going."]
+  ["Same ritual","Back to what works for you both."],
+  ["Stretch it","Try a slightly bigger plan."],
+  ["Make it yours","Choose the rhythm you'll keep going."]
 ];
 const WHO = ["My best friend","An old friend","Someone I haven't seen in a while","Someone I'd like to get closer to","Someone else I care about"];
 
@@ -218,6 +216,59 @@ function baselineWeekly(){ return [1.5, 0.5, 0.15, 0.05, 0][S.a.q9 ?? 1]; }
 
 /* ---------- Dates ---------- */
 
+function ageRange(dt){
+  const t = new Date(); let a = t.getFullYear() - dt.getFullYear();
+  if(t.getMonth() < dt.getMonth() || (t.getMonth()===dt.getMonth() && t.getDate() < dt.getDate())) a--;
+  return a < 18 ? 'Under 18' : a <= 20 ? '18–20' : a <= 24 ? '21–24' : a <= 29 ? '25–29' : a <= 34 ? '30–34' : '35+';
+}
+const isOnce = () => (S.freq || 'once') === 'once';
+function skipIfOnce(fn){
+  const wrapped = function(){ if(isOnce()){ next(); return; } return fn(); };
+  Object.defineProperty(wrapped, 'name', { value: fn.name || 'screen' });
+  return wrapped;
+}
+
+function ageGate(){
+  const yNow = new Date().getFullYear();
+  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const P = S.dobParts || {};
+  const opt = (v, t, cur) => `<option value="${v}"${String(cur)===String(v)?' selected':''}>${t}</option>`;
+  view(`
+    <div class="eyebrow">Before your results</div>
+    <h1>Confirm you're <em>18 or over</em>.</h1>
+    <p class="lede">Fliq.it is for adults. We use your date of birth to check your age, then only keep an age range — never the full date.</p>
+    <div class="eyebrow" style="margin-top:4px">Date of birth</div>
+    <div class="dob">
+      <select id="dd" aria-label="Day" autocomplete="bday-day">${opt('','Day',P.d)}${Array.from({length:31},(_,i)=>opt(i+1,i+1,P.d)).join('')}</select>
+      <select id="dm" aria-label="Month" autocomplete="bday-month">${opt('','Month',P.m)}${months.map((m,i)=>opt(i+1,m,P.m)).join('')}</select>
+      <select id="dy" aria-label="Year" autocomplete="bday-year">${opt('','Year',P.y)}${Array.from({length:78},(_,i)=>opt(yNow-13-i,yNow-13-i,P.y)).join('')}</select>
+    </div>
+    <p class="err" id="dobErr" hidden></p>
+    <div class="grow"></div>
+    <button class="btn" id="go" disabled>Continue</button>`);
+  const g = document.getElementById('go'), err = document.getElementById('dobErr');
+  const dd = document.getElementById('dd'), dm = document.getElementById('dm'), dy = document.getElementById('dy');
+  const dob = () => { const d=+dd.value, m=+dm.value, y=+dy.value; if(!d||!m||!y) return null; const dt = new Date(y, m-1, d, 12); return dt.getMonth()===m-1 ? dt : 'bad'; };
+  let blockedLogged = false;
+  const ready = () => {
+    const v = dob(), bad = v === 'bad', young = !!v && !bad && ageRange(v) === 'Under 18';
+    err.hidden = !(bad || young);
+    err.textContent = young ? "Fliq.it is for people aged 18 and over, so we can't continue." : "That date doesn't exist. Check the day and month.";
+    if(young){ S.age = null; S.dobParts = null; Fliq.clearHandoff(); if(!blockedLogged){ blockedLogged = true; track('under_18_blocked'); } }
+    g.disabled = !(v && !bad && !young);
+  };
+  [dd,dm,dy].forEach(el => el.onchange = ready);
+  ready();
+  g.onclick = () => {
+    const v = dob();
+    if(!v || v === 'bad' || ageRange(v) === 'Under 18') return;
+    S.dobParts = {d:dd.value, m:dm.value, y:dy.value};
+    S.age = ageRange(v);
+    track('age_confirmed', {age_range: S.age});
+    next();
+  };
+}
+
 /* ---------- Steps ---------- */
 const add = E.add;
 add(-1, landing);
@@ -230,6 +281,7 @@ add(0, sourceStep);
 if(EXPERT) add(0, expertStep);
 if(TESTIMONIALS.length) add(0, wallStep);
 add(1, ringLoader, {transient:true, name:'ring_loader'});
+add(1, ageGate, {name:'age_gate'});
 add(1, emailGate, {name:'email_gate'});
 add(1, summary);
 add(1, insight);
@@ -243,8 +295,8 @@ add(2, whenStep);
 add(2, freqStep);
 add(2, lockIn);
 add(2, buildPlan, {transient:true, name:'build_plan'});
-add(2, challengeReady);
-add(2, weekGrid);
+add(2, skipIfOnce(challengeReady), {name:'recurrence_ready'});
+add(2, skipIfOnce(weekGrid), {name:'checkin_preview'});
 add(2, planReady);
 add(2, appStep, {name:'waitlist'});
 
@@ -426,7 +478,7 @@ function beforeAfter(){
   view(`
     <div class="eyebrow">If nothing changes</div>
     <h1>${REVEAL[S.profile].cost}</h1>
-    <p class="lede">It doesn't have to go that way. Here's where you could be in eight weeks.</p>
+    <p class="lede">It doesn't have to go that way. Here's where a regular plan could take you.</p>
     <div class="ba">
       <div class="now"><h3>You now</h3><ul>${rows.map(r=>`<li><b>${r[0]}</b><span>${r[1]}</span></li>`).join('')}</ul></div>
       <div class="then"><h3>You with Fliq.it</h3><ul>${rows.map(r=>`<li><b>${r[2]}</b><span>${r[3]}</span></li>`).join('')}</ul></div>
@@ -586,21 +638,13 @@ function freqStep(){
     <div class="eyebrow">How often</div>
     <h1>One time, or make it <em>your thing</em>?</h1>
     <p class="lede">A small ritual you keep coming back to does more for a friendship than one big plan.</p>
-    <div class="opts">${keys.map(k=>`<button class="opt"><span>${FREQS[k].t}${k==='weekly'?'<span class="tag">Fits your challenge</span>':''}<small>${sub[k]}</small></span></button>`).join('')}</div>`);
+    <div class="opts">${keys.map(k=>`<button class="opt"><span>${FREQS[k].t}${k==='weekly'?'<span class="tag">Builds a rhythm</span>':''}<small>${sub[k]}</small></span></button>`).join('')}</div>`);
   bindOpts(i => { S.freq = keys[i]; track('plan_frequency',{freq:S.freq}); }, S.freq ? keys.indexOf(S.freq) : -1);
 }
 
 /* Review before locking in */
-function ageRange(dt){
-  const t = new Date(); let a = t.getFullYear() - dt.getFullYear();
-  if(t.getMonth() < dt.getMonth() || (t.getMonth()===dt.getMonth() && t.getDate() < dt.getDate())) a--;
-  return a < 18 ? 'Under 18' : a <= 20 ? '18–20' : a <= 24 ? '21–24' : a <= 29 ? '25–29' : a <= 34 ? '30–34' : '35+';
-}
 function lockIn(){
-  const nd = nextDates(3), yNow = new Date().getFullYear();
-  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  const P = S.dobParts || {};
-  const opt = (v, t, cur) => `<option value="${v}"${String(cur)===String(v)?' selected':''}>${t}</option>`;
+  const nd = nextDates(3);
   view(`
     <div class="eyebrow">Check it over</div>
     <h1>Let's make it real.</h1>
@@ -613,34 +657,15 @@ function lockIn(){
     </div>
     ${nd.length>1 ? `<div class="eyebrow">Your next dates</div><div class="chips">${nd.map(d=>`<span class="chip static">${fmt(d)}</span>`).join('')}</div>` : ''}
     <label class="field" for="name">Your first name, so ${F()} knows the invite is from you<input type="text" id="name" autocomplete="given-name" placeholder="e.g. Favour" value="${esc(S.name)}"></label>
-    <div class="eyebrow" style="margin-top:4px">Date of birth</div>
-    <div class="dob">
-      <select id="dd" aria-label="Day" autocomplete="bday-day">${opt('','Day',P.d)}${Array.from({length:31},(_,i)=>opt(i+1,i+1,P.d)).join('')}</select>
-      <select id="dm" aria-label="Month" autocomplete="bday-month">${opt('','Month',P.m)}${months.map((m,i)=>opt(i+1,m,P.m)).join('')}</select>
-      <select id="dy" aria-label="Year" autocomplete="bday-year">${opt('','Year',P.y)}${Array.from({length:78},(_,i)=>opt(yNow-13-i,yNow-13-i,P.y)).join('')}</select>
-    </div>
-    <p class="err" id="dobErr" hidden>That date doesn't exist. Check the day and month.</p>
     <div class="grow"></div>
-    <button class="btn" id="go" disabled>Looks good</button>`);
-  const i = document.getElementById('name'), g = document.getElementById('go'), err = document.getElementById('dobErr');
-  const dd = document.getElementById('dd'), dm = document.getElementById('dm'), dy = document.getElementById('dy');
-  const dob = () => { const d=+dd.value, m=+dm.value, y=+dy.value; if(!d||!m||!y) return null; const dt = new Date(y, m-1, d, 12); return dt.getMonth()===m-1 ? dt : 'bad'; };
-  let blockedLogged = false;
-  const ready = () => {
-    const v = dob(), bad = v === 'bad', young = !!v && !bad && ageRange(v) === 'Under 18';
-    err.hidden = !(bad || young);
-    err.textContent = young ? "Fliq.it is for people aged 18 and over, so we can't build this plan for you yet." : "That date doesn't exist. Check the day and month.";
-    if(young){ S.dob = null; S.age = null; Fliq.clearHandoff(); if(!blockedLogged){ blockedLogged = true; track('under_18_blocked'); } }
-    g.disabled = !(i.value.trim() && v && !bad && !young);
-  };
-  i.oninput = ready; [dd,dm,dy].forEach(el => el.onchange = ready);
+    <button class="btn" id="go" ${S.name?'':'disabled'}>Looks good</button>`);
+  const i = document.getElementById('name'), g = document.getElementById('go');
+  const ready = () => { g.disabled = !i.value.trim(); };
+  i.oninput = ready;
   i.onkeydown = e => { if(e.key==='Enter' && !g.disabled) g.click(); };
   ready();
   g.onclick = () => {
-    const v = dob();
-    if(!v || v === 'bad' || ageRange(v) === 'Under 18') return;
     S.name = i.value.trim().split(' ')[0];
-    S.dobParts = {d:dd.value, m:dm.value, y:dy.value}; S.dob = isoDate(v); S.age = ageRange(v);
     track('plan_locked', planPayload()); commit(); next();
   };
 }
@@ -648,10 +673,13 @@ function lockIn(){
 /* "Creating your challenge" bars with one mid-build question */
 async function buildPlan(){
   const id = E.nextRun();
-  const labels = ["Your friendship map","Eight weeks of plans","Your weekly rhythm"];
+  const once = isOnce();
+  const labels = once
+    ? ["Your plan with "+(S.friend||'them'),"A day and a time","A reminder, if you want"]
+    : ["Your plan with "+(S.friend||'them'),"Your recurring rhythm","Check-in slots"];
   view(`
     <div class="eyebrow">Almost done</div>
-    <h1>Creating your <em>8-week challenge</em> with ${F()}</h1>
+    <h1>${once ? `Saving your <em>plan</em> with ${F()}` : `Setting up your <em>recurring plan</em> with ${F()}`}</h1>
     <div class="bars">${labels.map((l,i)=>`<div class="bar"><b id="b${i}"></b><span>${l}</span><em id="e${i}"></em></div>`).join('')}</div>
     <div class="grow"></div>`);
   const fill = async i => { const b=document.getElementById('b'+i); if(!b) return false; b.style.width='100%'; await wait(950); if(id!==E.runId()) return false; document.getElementById('e'+i).textContent='Done'; return true; };
@@ -665,53 +693,32 @@ async function buildPlan(){
 
 /* Challenge ready: projection chart built from their own answer + chosen plan */
 function challengeReady(){
-  const h = expH(), fq = FREQS[S.freq||'once'], every = fq.every || 1;
-  const start = S.dayDate || nextDow(6,1);
-  const end = new Date(start); end.setDate(end.getDate()+49);
-  const plan = [], base = [];
-  for(let w=0; w<=8; w++){ plan.push(+(Math.ceil(w/every)*h).toFixed(1)); base.push(+(w*baselineWeekly()).toFixed(1)); }
-  const max = Math.max(4, Math.ceil(plan[8]/4)*4);
-  const W=320, H=170, L=30, Rt=10, T=14, B=26;
-  const x = i => L + (W-L-Rt)*i/8, y = v => T + (H-T-B)*(1 - v/max);
-  const path = arr => arr.map((v,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-  const area = path(plan) + ` L${x(8)},${y(0)} L${x(0)},${y(0)} Z`;
-  const ticks = [0, max/2, max];
+  const fq = FREQS[S.freq||'once'];
+  const dates = nextDates(8);
+  const start = dates[0] || S.dayDate || nextDow(6,1);
   view(`
-    <div class="eyebrow">${N()}, your challenge is ready</div>
-    <h1>Eight weeks of plans with <em>${F()}</em>.</h1>
-    <span class="datechip">${fmt(start)} to ${fmtLong(end)}</span>
-    <div class="chartbox">
-      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Hours together over eight weeks">
-        <defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B9A0FF" stop-opacity=".35"/><stop offset="1" stop-color="#B9A0FF" stop-opacity="0"/></linearGradient></defs>
-        ${ticks.map(t=>`<line x1="${L}" x2="${W-Rt}" y1="${y(t)}" y2="${y(t)}" stroke="rgba(236,226,255,.1)"/><text x="${L-6}" y="${y(t)+4}" text-anchor="end" font-size="10" fill="#7E7499">${t}h</text>`).join('')}
-        ${[0,2,4,6,8].map(w=>`<text x="${x(w)}" y="${H-8}" text-anchor="middle" font-size="10" fill="#7E7499">${w?'Wk '+w:'Now'}</text>`).join('')}
-        <path d="${area}" fill="url(#ga)"/>
-        <path d="${path(base)}" fill="none" stroke="#7E7499" stroke-width="2" stroke-dasharray="4 4"/>
-        <path id="pl" d="${path(plan)}" fill="none" stroke="#B9A0FF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="${x(0)}" cy="${y(0)}" r="5" fill="#FF9BBB" stroke="#120D20" stroke-width="2"/>
-        <circle cx="${x(8)}" cy="${y(plan[8])}" r="6" fill="#B9A0FF" stroke="#120D20" stroke-width="2"/>
-        <text x="${x(8)-8}" y="${y(plan[8])-10}" text-anchor="end" font-size="12" font-weight="700" fill="#F3EEFF">${plan[8]} hours together</text>
-      </svg>
-      <div class="legend"><span><i></i>With your plan</span><span><i class="dash"></i>If nothing changes</span></div>
+    <div class="eyebrow">${N()}, your recurring plan is ready</div>
+    <h1>One plan with <em>${F()}</em>. Check-ins that keep it going.</h1>
+    <p class="lede">Fliq.it keeps this as a single ${fq.short.toLowerCase()} plan. Each date below is a check-in on that plan — you'll choose how many when you open the app.</p>
+    <span class="datechip">${fmt(start)}${dates.length>1 ? ' onwards' : ''}</span>
+    <div class="panel">
+      ${dates.slice(0,6).map((d,i)=>`<div class="kv"><span>Check-in ${i+1}</span><b>${fmt(d)} · ${esc(S.time||'')}</b></div>`).join('')}
+      ${dates.length>6 ? `<div class="kv"><span>And more</span><b>${dates.length-6} further dates</b></div>` : ''}
     </div>
-    <p class="fine">“If nothing changes” uses your answer about when you last felt connected. \u201cWith your plan\u201d assumes ${fq.every ? esc(expT().toLowerCase()) + ', ' + fq.short.toLowerCase() : 'one plan a week from your challenge'}. An illustration, not a promise.</p>
+    <p class="fine">Preview only. In the app you set how many times this repeats. No separate “challenge” product — just this plan and its check-ins.</p>
     <div class="grow"></div>
-    <button class="btn" id="go">See my eight weeks</button>`);
-  const pl = document.getElementById('pl');
-  if(pl && pl.getTotalLength){ const len = pl.getTotalLength(); pl.style.strokeDasharray=len; pl.style.strokeDashoffset=len; pl.getBoundingClientRect(); pl.style.transition='stroke-dashoffset 1.4s cubic-bezier(.2,.8,.2,1)'; pl.style.strokeDashoffset=0; }
+    <button class="btn" id="go">See the rhythm</button>`);
   btn('go', next);
 }
 
 function weekGrid(){
-  const f = S.freq || 'once', ev = FREQS[f].every, start = S.dayDate || nextDow(6,1);
-  const dates = {0:start};
-  if(f==='monthly'){ const d = new Date(start); d.setMonth(d.getMonth()+1); dates[Math.round((d-start)/6048e5)] = d; }
-  else if(ev){ for(let i=ev;i<8;i+=ev){ const d = new Date(start); d.setDate(d.getDate()+7*i); dates[i] = d; } }
+  const fq = FREQS[S.freq||'once'];
+  const dates = nextDates(8);
   view(`
-    <div class="eyebrow">Your 8-week challenge</div>
-    <h1>Week 1 is planned. The rest happens in <em>Fliq.it</em>.</h1>
-    <p class="lede">${ev ? `Your ${FREQS[f].short.toLowerCase()} ${esc(expT().toLowerCase())} is planned. Each week the app gives it a new twist.` : 'Each week the app unlocks a new prompt. You pick the plan, and Fliq.it reminds you both.'}</p>
-    <div class="wgrid">${WEEKS.map(([t,d],i)=>`<div class="wk ${dates[i]?'on':i>3?'dim':''}"><small>Week ${i+1}${dates[i]?' \u00b7 '+fmt(dates[i]):''}</small><b>${t}</b><span>${dates[i] ? esc(expT())+', planned' : esc(d.replace('{f}', S.friend||'They'))}</span></div>`).join('')}</div>
+    <div class="eyebrow">Your recurring plan with ${F()}</div>
+    <h1>First date planned. Check-ins live in <em>Fliq.it</em>.</h1>
+    <p class="lede">Your ${fq.short.toLowerCase()} ${esc(expT().toLowerCase())} is set. In the app each occurrence is a check-in on this same plan — and you can copy an invite for ${F()} until they're on Fliq.it.</p>
+    <div class="wgrid">${dates.slice(0,8).map((d,i)=>`<div class="wk ${i===0?'on':i>3?'dim':''}"><small>Check-in ${i+1} · ${fmt(d)}</small><b>${i===0?'First date':WEEKS[Math.min(i,WEEKS.length-1)][0]}</b><span>${i===0 ? esc(expT())+', planned' : esc(WEEKS[Math.min(i,WEEKS.length-1)][1].replace('{f}', S.friend||'They'))}</span></div>`).join('')}</div>
     <div class="grow"></div>
     <div class="proof"><div class="faces"><i></i><i></i><i></i></div><span>${proofLine()}</span></div>
     <button class="btn" id="go">Continue</button>`);
@@ -757,18 +764,25 @@ function planReady(){
 
 function appStep(){
   const h = commit();
-  const typeName = PROFILES[S.profile].name.replace('The ','');
-  const link = Fliq.appLink(h);   // null until the app is live and CONFIG.APP_LINK_BASE is set
+  const once = isOnce();
+  const link = Fliq.appLink(h);
+  const items = [
+    `<li><span class="n">1</span><div><b>Your plan, ready</b><span>${esc(expT())} with ${F()}, ${esc(placeLabel())}, ${esc(S.dayLabel)} at ${esc(S.time||'')}${!once ? ', ' + FREQS[S.freq].short.toLowerCase() : ''}.</span></div></li>`,
+  ];
+  let n = 2;
+  if(S.pop.p3){
+    items.push(`<li><span class="n">${n++}</span><div><b>Reminders so it doesn't slip</b><span>We’ll nudge you the day before, so it actually happens.</span></div></li>`);
+  }
+  if(!once){
+    items.push(`<li><span class="n">${n++}</span><div><b>Check-ins on this plan</b><span>Each ${FREQS[S.freq].short.toLowerCase()} date is a check-in on the same plan. You’ll set how many times in the app.</span></div></li>`);
+  }
+  items.push(`<li><span class="n">${n}</span><div><b>Invite ${F()} when you're ready</b><span>Copy the message for now. When they're on Fliq.it, add them by username and code, then invite them to this plan.</span></div></li>`);
   view(`
     <div class="eyebrow">Your plan with ${F()} is saved</div>
     <h1>Fliq.it is <em>almost here</em>.</h1>
     <p class="lede">The app isn't live yet. When it opens, this is what's waiting for you.</p>
-    <ul class="list">
-      <li><span class="n">1</span><div><b>Your plan, locked in</b><span>${esc(expT())} with ${F()}, ${esc(placeLabel())}, ${esc(S.dayLabel)} at ${esc(S.time||'')}${S.freq && S.freq!=='once' ? ', ' + FREQS[S.freq].short.toLowerCase() : ''}.</span></div></li>
-      ${S.pop.p3 ? `<li><span class="n">2</span><div><b>Reminders so it doesn't slip</b><span>We’ll nudge you the day before, so it actually happens.</span></div></li>` : ''}
-      <li><span class="n">${S.pop.p3 ? 3 : 2}</span><div><b>Weeks 2 to 8 of your challenge</b><span>A new prompt each week, ideas picked for ${typeName}s, and a quick check-in after every plan.</span></div></li>
-    </ul>
-    <div class="weeks" aria-label="8-week challenge, week 1 planned">${[1,2,3,4,5,6,7,8].map(w=>`<i class="${w===1?'now':''}">W${w}</i>`).join('')}</div>
+    <ul class="list">${items.join('')}</ul>
+    ${!once ? `<div class="weeks" aria-label="Upcoming check-ins">${[1,2,3,4,5,6,7,8].map(w=>`<i class="${w===1?'now':''}">${w}</i>`).join('')}</div>` : ''}
     <div class="grow"></div>
     <div class="proof"><div class="faces"><i></i><i></i><i></i></div><span>${proofLine()}</span></div>
     ${S.joined
