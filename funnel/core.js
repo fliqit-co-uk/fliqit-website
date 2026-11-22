@@ -113,6 +113,23 @@
     }
   }
 
+  /**
+   * Stamp consent + POST handoff if a local plan exists.
+   * Safe to call after early waitlist join (email gate) once the plan is built later.
+   */
+  async function persistHandoffIfReady(email, mode) {
+    if (!email) return { ok: false, skipped: true };
+    const handoff = loadHandoff();
+    if (!handoff || !handoff.id) return { ok: false, skipped: true };
+    const stamped = Object.assign({}, handoff, {
+      consent: Object.assign({}, handoff.consent || {}, { waitlist: true }),
+    });
+    saveHandoff(stamped);
+    const hp = await postHandoff(email, stamped);
+    track(mode || 'funnel', 'handoff_persisted', { ok: !!hp.ok });
+    return hp;
+  }
+
   /* Validates + submits an email from a funnel screen. Returns true on success. */
   async function submitEmail(S, input, errEl, button, mode) {
     const v = input.value.trim();
@@ -131,17 +148,10 @@
     S.email = v; S.joined = true;
     track(mode, 'waitlist_joined', { already: r.alreadyJoined });
 
-    // Persist handoff for claim after install (keep localStorage either way)
-    const handoff = loadHandoff();
-    if (handoff) {
-      button.textContent = 'Saving your plan…';
-      const stamped = Object.assign({}, handoff, {
-        consent: Object.assign({}, handoff.consent || {}, { waitlist: true }),
-      });
-      saveHandoff(stamped);
-      const hp = await postHandoff(v, stamped);
-      track(mode, 'handoff_persisted', { ok: !!hp.ok });
-    }
+    // Persist handoff when the plan already exists (final waitlist). Early email-gate
+    // joins usually have no handoff yet — appStep posts once the plan is locked.
+    button.textContent = 'Saving your plan…';
+    await persistHandoffIfReady(v, mode);
 
     button.disabled = false; button.textContent = label;
     return true;
@@ -310,6 +320,6 @@
 
   global.Fliq = {
     CONFIG, esc, wait, $, isoDate, nextDow, fmt, fmtLong, dayOptions, track, EMAIL_RE,
-    joinWaitlist, submitEmail, postHandoff, buildHandoff, saveHandoff, loadHandoff, clearHandoff, appLink, createEngine,
+    joinWaitlist, submitEmail, postHandoff, persistHandoffIfReady, buildHandoff, saveHandoff, loadHandoff, clearHandoff, appLink, createEngine,
   };
 })(window);

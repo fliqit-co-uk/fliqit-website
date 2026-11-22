@@ -720,6 +720,10 @@ function appStep(){
   const h = commit();
   const once = isOnce();
   const link = Fliq.appLink(h);   // null until the app is live and CONFIG.APP_LINK_BASE is set
+  // If they joined at the early email gate, the plan didn't exist yet — POST now.
+  if(S.joined && S.email && h){
+    Fliq.persistHandoffIfReady(S.email, MODE);
+  }
   const items = [
     `<li><span class="n">1</span><div><b>It's in your week</b><span>${esc(expT())}, ${esc(placeLabel())}, ${esc(S.dayLabel)} at ${esc(S.time||'')}${!once ? ', ' + FREQS[S.freq].short.toLowerCase() : ''}.${S.pop.p3?' We’ll remind you the day before.':''}</span></div></li>`,
   ];
