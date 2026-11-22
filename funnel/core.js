@@ -15,6 +15,7 @@
 
   const CONFIG = {
     WAITLIST_URL: 'https://europe-west1-fliqit-f5a70.cloudfunctions.net/api/v1/waitlist',
+    HANDOFFS_URL: 'https://europe-west1-fliqit-f5a70.cloudfunctions.net/api/v1/funnel/handoffs',
     PRIVACY_URL: 'https://app.termly.io/policy-viewer/policy.html?policyUUID=1be56505-1192-4bec-8f0f-e5f7b94464ea',
     /* Set to the store / smart link (Branch, AppsFlyer, etc.) when the app is live.
        While null, no download button is shown and the waitlist is the only call to action. */
@@ -93,6 +94,25 @@
     }
   }
 
+  /** Persist local handoff against waitlist email (Phase 3). Best-effort; localStorage remains. */
+  async function postHandoff(email, handoff) {
+    if (!email || !handoff || !handoff.id) return { ok: false };
+    try {
+      const res = await fetch(CONFIG.HANDOFFS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, handoff }),
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        return { ok: false, error: payload.error || 'Could not save your plan.' };
+      }
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: 'Could not reach the server.' };
+    }
+  }
+
   /* Validates + submits an email from a funnel screen. Returns true on success. */
   async function submitEmail(S, input, errEl, button, mode) {
     const v = input.value.trim();
@@ -104,10 +124,26 @@
     const label = button.textContent;
     button.disabled = true; button.textContent = 'Joining…';
     const r = await joinWaitlist(v);
-    button.disabled = false; button.textContent = label;
-    if (!r.ok) { errEl.textContent = r.error; errEl.hidden = false; return false; }
+    if (!r.ok) {
+      button.disabled = false; button.textContent = label;
+      errEl.textContent = r.error; errEl.hidden = false; return false;
+    }
     S.email = v; S.joined = true;
     track(mode, 'waitlist_joined', { already: r.alreadyJoined });
+
+    // Persist handoff for claim after install (keep localStorage either way)
+    const handoff = loadHandoff();
+    if (handoff) {
+      button.textContent = 'Saving your plan…';
+      const stamped = Object.assign({}, handoff, {
+        consent: Object.assign({}, handoff.consent || {}, { waitlist: true }),
+      });
+      saveHandoff(stamped);
+      const hp = await postHandoff(v, stamped);
+      track(mode, 'handoff_persisted', { ok: !!hp.ok });
+    }
+
+    button.disabled = false; button.textContent = label;
     return true;
   }
 
@@ -274,6 +310,6 @@
 
   global.Fliq = {
     CONFIG, esc, wait, $, isoDate, nextDow, fmt, fmtLong, dayOptions, track, EMAIL_RE,
-    joinWaitlist, submitEmail, buildHandoff, saveHandoff, loadHandoff, clearHandoff, appLink, createEngine,
+    joinWaitlist, submitEmail, postHandoff, buildHandoff, saveHandoff, loadHandoff, clearHandoff, appLink, createEngine,
   };
 })(window);

@@ -7,7 +7,7 @@ const { USER_COUNT, EXPERT, TESTIMONIALS } = CONFIG;
 const MODE = 'friends';
 const track = (event, props) => Fliq.track(MODE, event, props);
 
-const S = { name:"", gender:null, age:null, dobParts:null, a:{}, src:null, pop:{}, email:"", joined:false, handoffId:null, who:null, friend:"", exp:null, customExp:"", place:null, freq:null, dayLabel:"", dayDate:null, time:null, profile:null };
+const S = { name:"", gender:null, age:null, dobParts:null, a:{}, src:null, pop:{}, email:"", joined:false, handoffId:null, who:null, friend:"", exp:null, customExp:"", place:null, freq:null, recurrenceCount:8, dayLabel:"", dayDate:null, time:null, profile:null };
 const E = Fliq.createEngine({ mode: MODE, S });
 const { view, bindOpts, btn, ask, closeModal, next } = E;
 const app = Fliq.$('#app');
@@ -147,6 +147,7 @@ function handoff(){
       duration_minutes: Math.round(expH() * 60),
       energy: custom ? 'mid' : ENERGY[S.exp],
       recurrence: S.freq || 'once', rrule: f.rrule,
+      recurrence_count: (S.freq && S.freq !== 'once') ? (S.recurrenceCount || 8) : null,
       invite_message: inviteText(),
     },
     reminders: { day_before: !!S.pop.p3 },
@@ -293,6 +294,7 @@ add(2, experienceStep);
 add(2, placeStep);
 add(2, whenStep);
 add(2, freqStep);
+add(2, skipIfOnce(countStep), {name:'recurrence_count'});
 add(2, lockIn);
 add(2, buildPlan, {transient:true, name:'build_plan'});
 add(2, skipIfOnce(challengeReady), {name:'recurrence_ready'});
@@ -641,6 +643,37 @@ function freqStep(){
     <div class="opts">${keys.map(k=>`<button class="opt"><span>${FREQS[k].t}${k==='weekly'?'<span class="tag">Builds a rhythm</span>':''}<small>${sub[k]}</small></span></button>`).join('')}</div>`);
   bindOpts(i => { S.freq = keys[i]; track('plan_frequency',{freq:S.freq}); }, S.freq ? keys.indexOf(S.freq) : -1);
 }
+function countStep(){
+  if(!S.recurrenceCount) S.recurrenceCount = 8;
+  const clamp = (n) => Math.max(2, Math.min(52, n|0));
+  const paint = () => {
+    view(`
+      <div class="eyebrow">How many times</div>
+      <h1>How many check-ins on this plan?</h1>
+      <p class="lede">We'll create this many dated check-ins. You can tweak this again in the app when you claim the plan.</p>
+      <div class="panel" style="display:flex;align-items:center;justify-content:center;gap:16px;padding:20px">
+        <button class="btn secondary" id="minus" type="button" style="width:48px;min-width:48px;padding:12px">−</button>
+        <b id="cnt" style="font-size:2rem">${S.recurrenceCount}</b>
+        <button class="btn secondary" id="plus" type="button" style="width:48px;min-width:48px;padding:12px">+</button>
+      </div>
+      <div class="chips" style="justify-content:center;margin-top:12px">
+        ${[4,8,12].map(n=>`<button type="button" class="chip${S.recurrenceCount===n?' sel':''}" data-n="${n}">${n}×</button>`).join('')}
+      </div>
+      <div class="grow"></div>
+      <button class="btn" id="go">Continue</button>`);
+    document.getElementById('minus').onclick = () => { S.recurrenceCount = clamp(S.recurrenceCount - 1); paint(); };
+    document.getElementById('plus').onclick = () => { S.recurrenceCount = clamp(S.recurrenceCount + 1); paint(); };
+    document.querySelectorAll('.chip[data-n]').forEach((b) => {
+      b.onclick = () => { S.recurrenceCount = clamp(+b.dataset.n); paint(); };
+    });
+    document.getElementById('go').onclick = () => {
+      track('plan_recurrence_count', { count: S.recurrenceCount, freq: S.freq });
+      commit();
+      next();
+    };
+  };
+  paint();
+}
 
 /* Review before locking in */
 function lockIn(){
@@ -699,13 +732,13 @@ function challengeReady(){
   view(`
     <div class="eyebrow">${N()}, your recurring plan is ready</div>
     <h1>One plan with <em>${F()}</em>. Check-ins that keep it going.</h1>
-    <p class="lede">Fliq.it keeps this as a single ${fq.short.toLowerCase()} plan. Each date below is a check-in on that plan — you'll choose how many when you open the app.</p>
+    <p class="lede">Fliq.it keeps this as a single ${fq.short.toLowerCase()} plan with <strong>${S.recurrenceCount || 8}</strong> check-ins. You can still tweak the count in the app when you claim it.</p>
     <span class="datechip">${fmt(start)}${dates.length>1 ? ' onwards' : ''}</span>
     <div class="panel">
       ${dates.slice(0,6).map((d,i)=>`<div class="kv"><span>Check-in ${i+1}</span><b>${fmt(d)} · ${esc(S.time||'')}</b></div>`).join('')}
       ${dates.length>6 ? `<div class="kv"><span>And more</span><b>${dates.length-6} further dates</b></div>` : ''}
     </div>
-    <p class="fine">Preview only. In the app you set how many times this repeats. No separate “challenge” product — just this plan and its check-ins.</p>
+    <p class="fine">Preview of your rhythm. No separate “challenge” product — just this plan and its check-ins.</p>
     <div class="grow"></div>
     <button class="btn" id="go">See the rhythm</button>`);
   btn('go', next);
@@ -774,7 +807,7 @@ function appStep(){
     items.push(`<li><span class="n">${n++}</span><div><b>Reminders so it doesn't slip</b><span>We’ll nudge you the day before, so it actually happens.</span></div></li>`);
   }
   if(!once){
-    items.push(`<li><span class="n">${n++}</span><div><b>Check-ins on this plan</b><span>Each ${FREQS[S.freq].short.toLowerCase()} date is a check-in on the same plan. You’ll set how many times in the app.</span></div></li>`);
+    items.push(`<li><span class="n">${n++}</span><div><b>Check-ins on this plan</b><span>${S.recurrenceCount || 8}× ${FREQS[S.freq].short.toLowerCase()} — each date is a check-in on the same plan (editable in the app).</span></div></li>`);
   }
   items.push(`<li><span class="n">${n}</span><div><b>Invite ${F()} when you're ready</b><span>Copy the message for now. When they're on Fliq.it, add them by username and code, then invite them to this plan.</span></div></li>`);
   view(`
